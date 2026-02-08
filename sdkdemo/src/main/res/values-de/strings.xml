@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WuKong SDK Demo</string>
+    <string name="voice_dialogue_title">Sprachdialog</string>
+    <string name="voice_dialogue_start">Starten</string>
+    <string name="voice_dialogue_stop">Stoppen</string>
+    <string name="voice_dialogue_wake_up">Aufwachen</string>
+    <string name="voice_dialogue_done">Fertig</string>
+    <string name="voice_dialogue_listening">Ich hoere zu...</string>
+    <string name="voice_dialogue_processing">Einen Moment...</string>
+    <string name="voice_dialogue_did_not_catch">Das habe ich nicht verstanden.</string>
+    <string name="voice_dialogue_error">Entschuldigung, ein Fehler ist aufgetreten.</string>
+    <string name="voice_dialogue_ready">Bereit</string>
+    <string name="voice_dialogue_waking_up">Ich bin da!</string>
+    <string name="voice_dialogue_goodbye">Auf Wiedersehen!</string>
+    <string name="language_english">Englisch</string>
+    <string name="language_german">Deutsch</string>
+    <string name="language_auto">Automatisch</string>
+</resources>

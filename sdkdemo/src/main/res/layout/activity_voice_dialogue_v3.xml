@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#1a1a2e">
+
+    <!-- Header with Back Button -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <ImageButton
+            android:id="@+id/backButton"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@android:drawable/ic_menu_revert"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Back to Main Menu"/>
+
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="Voice Dialogue"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"/>
+
+        <Spinner
+            android:id="@+id/languageSpinner"
+            android:layout_width="120dp"
+            android:layout_height="40dp"
+            android:background="#333355"
+            android:popupBackground="#333355"/>
+    </LinearLayout>
+
+    <!-- State Indicator Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <View
+            android:id="@+id/stateIndicator"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:background="#808080"/>
+
+        <TextView
+            android:id="@+id/stateText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="IDLE"
+            android:textColor="#AAAAAA"
+            android:textSize="14sp"/>
+
+        <TextView
+            android:id="@+id/turnCounter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Turns: 0"
+            android:textColor="#90EE90"
+            android:textSize="14sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <!-- Session Status -->
+    <TextView
+        android:id="@+id/sessionStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ready"
+        android:textColor="#FFD700"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:padding="8dp"
+        android:background="#2a2a4e"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Conversation History -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Conversation:"
+        android:textColor="#AAAAAA"
+        android:textSize="12sp"
+        android:layout_marginBottom="4dp"/>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:background="#222244"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/conversationHistory"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textColor="#CCCCCC"
+            android:textSize="13sp"
+            android:fontFamily="monospace"/>
+    </ScrollView>
+
+    <!-- Current Exchange -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#2a2a4e"
+        android:padding="8dp"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/transcriptionText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="You: ..."
+            android:textColor="#90EE90"
+            android:textSize="14sp"
+            android:maxLines="2"
+            android:ellipsize="end"/>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#444466"
+            android:layout_marginVertical="4dp"/>
+
+        <TextView
+            android:id="@+id/responseText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Robot: ..."
+            android:textColor="#87CEEB"
+            android:textSize="14sp"
+            android:maxLines="3"
+            android:ellipsize="end"/>
+    </LinearLayout>
+
+    <!-- Metrics -->
+    <TextView
+        android:id="@+id/metricsText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Metrics: --"
+        android:textColor="#888888"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:background="#1a1a2e"
+        android:padding="4dp"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Control Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/wakeupButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"
+            android:text="WAKEUP"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#4CAF50"/>
+
+        <Button
+            android:id="@+id/bargeInButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="4dp"
+            android:text="BARGE-IN"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#FF9800"
+            android:enabled="false"/>
+
+        <Button
+            android:id="@+id/stopButton"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:text="STOP"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#f44336"
+            android:enabled="false"/>
+    </LinearLayout>
+
+</LinearLayout>

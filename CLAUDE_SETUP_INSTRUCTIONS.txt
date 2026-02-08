@@ -1,0 +1,327 @@
+================================================================================
+ROBOT VOICE DIALOGUE APP - SETUP INSTRUCTIONS FOR CLAUDE
+================================================================================
+Last Updated: 2026-02-04
+
+When user asks to "run the app" or "launch the app", execute these steps:
+
+================================================================================
+IMPORTANT: THREE VOICE DIALOGUE VERSIONS
+================================================================================
+- "Voice Dialogue V3 (Continuous)" - PURPLE button, NEWEST - Full multi-turn conversation
+  Features: Multi-turn dialogue, session management, context tracking, stop detection,
+  silence handling, barge-in, rolling memory, graceful session end
+
+- "Voice Dialogue V2 (Low Latency)" - Blue button, single-turn with low latency
+  Features: VAD-based speech detection, barge-in support, behavior sync, latency metrics
+
+- "Voice Dialogue (Original)" - Green button, older implementation
+
+================================================================================
+STEP 1: SET ENVIRONMENT VARIABLES
+================================================================================
+JAVA_HOME = C:\Program Files\Android\Android Studio\jbr
+ADB_PATH = C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe
+SCRCPY_PATH = C:\Users\wissem.malleh\Downloads\scrcpy-win64-v3.3.4\scrcpy-win64-v3.3.4\scrcpy.exe
+
+================================================================================
+STEP 2: ADB REVERSE PORT FORWARDING
+================================================================================
+Run via PowerShell:
+& 'C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe' reverse tcp:8080 tcp:8080
+& 'C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe' reverse tcp:5000 tcp:5000
+
+================================================================================
+STEP 3: START TTS SERVER (Port 5000)
+================================================================================
+Directory: C:\Users\wissem.malleh\Downloads\mini_libs_robot_third_sdk v1.0.6\mini_libs_robot_third_sdk\tts_server
+Command: python -u server.py
+Run in background.
+
+================================================================================
+STEP 4: START LLM SERVER (Port 8080)
+================================================================================
+Directory: C:\Users\wissem.malleh\Downloads\mini_libs_robot_third_sdk v1.0.6\mini_libs_robot_third_sdk\llm_server
+Command: python -u server.py
+Run in background.
+
+Features:
+- Vosk speech recognition (English + German models)
+- Short responses for low latency (1-5 words)
+- Free weather API via wttr.in (no API key needed)
+- Language detection from language_instruction parameter
+
+================================================================================
+STEP 5: BUILD AND INSTALL APP
+================================================================================
+Directory: C:\Users\wissem.malleh\Downloads\mini_libs_robot_third_sdk v1.0.6\mini_libs_robot_third_sdk
+Command (PowerShell):
+Set-Item -Path Env:JAVA_HOME -Value 'C:\Program Files\Android\Android Studio\jbr'
+.\gradlew.bat :sdkdemo:installDebug
+
+================================================================================
+STEP 6: LAUNCH APP
+================================================================================
+& 'C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe' shell am start -n com.ubtrobot.mini.sdkdemo/.MainActivity
+
+User navigates to "Voice Dialogue" from main menu.
+
+================================================================================
+KEY FILES AND FIXES APPLIED
+================================================================================
+
+1. llm_server/server.py
+   - Vosk speech recognition with English (vosk-model-small-en-us-0.15) and German (vosk-model-small-de-0.15) models
+   - Models auto-download on first run (~40MB each)
+   - Short responses for low latency
+   - Free weather via wttr.in API
+   - Endpoints: /v1/chat, /v1/audio/chat, /health
+   - FIX: Weather pattern moved before date pattern (fixes "wie ist der wetter heute")
+   - FIX: Added "heißt/heisst" pattern for German name questions
+
+2. tts_server/server.py (renamed from edge_tts_server.py)
+   - Edge TTS for text-to-speech
+   - Supports en-US and de-DE voices
+
+3. sdkdemo/.../VoiceDialogueController.kt
+   - State machine: IDLE -> WAKING -> RECORDING -> PROCESSING -> SPEAKING
+   - Continuous conversation mode (auto-listen after response)
+   - Uses language_instruction to tell server which language model to use
+
+4. sdkdemo/.../VoiceDialogueConfig.kt
+   - LanguageMode: EN, DE, AUTO
+   - enableContinuousConversation = true by default
+   - Configurable TTS/LLM server URLs
+
+5. sdkdemo/.../DialogueAudioPlayer.kt
+   - Fixed: Uses externalCacheDir for VoicePool access (permission fix)
+
+6. sdkdemo/.../EdgeTTS.kt
+   - Fixed: Uses externalCacheDir for audio files
+
+7. sdkdemo/res/layout/activity_voice_dialogue.xml
+   - Mock LLM checkbox unchecked by default (uses real LLM server)
+
+================================================================================
+V2 LOW-LATENCY VOICE DIALOGUE FILES (NEW - 2026-02-04)
+================================================================================
+
+8. sdkdemo/.../voicedialogue/v2/DialogueConfig.kt
+   - Configuration for V2 system
+   - VAD settings: silenceTimeoutMs=800, hangoverMs=300
+   - Barge-in enabled by default
+   - Target response latency: 500ms
+
+9. sdkdemo/.../voicedialogue/v2/DialogueStateMachine.kt
+   - States: IDLE -> LISTENING -> CAPTURING -> THINKING -> SPEAKING -> IDLE
+   - Latency metrics tracking (endpoint-to-audio, LLM latency, total turn)
+
+10. sdkdemo/.../voicedialogue/v2/StreamingAudioRecorder.kt
+    - 16kHz mono PCM, 20ms frames
+    - VAD with energy-based endpoint detection
+    - Noise floor calibration, clipping detection
+    - AcousticEchoCanceler, NoiseSuppressor, AutomaticGainControl
+
+11. sdkdemo/.../voicedialogue/v2/WakeupManager.kt
+    - Chest button long-press wakeup using SysEventApi
+    - Manual wakeup trigger support
+    - Uses correct SDK imports:
+      * com.ubtrobot.masterevent.protos.SysMasterEvent
+      * com.ubtrobot.mini.sysevent.SysEventApi
+      * com.ubtrobot.mini.sysevent.event.ChestEvent
+      * com.ubtrobot.mini.sysevent.receiver.KeyEventReceiver
+
+12. sdkdemo/.../voicedialogue/v2/BehaviorMapper.kt
+    - Maps LLM emotions to robot expressions/actions/lights
+    - RobotApiFactory with CORRECT SDK API calls:
+      * ExpressApi: com.ubtrobot.express.ExpressApi.get().doExpress()
+      * ActionApi: com.ubtrobot.action.ActionApi.get().playAction()
+      * LightApi: com.ubtrobot.led.LightApi.getInstance().normalEffect()
+    - Pre-roll/post-roll timing for behavior sync
+
+13. sdkdemo/.../voicedialogue/v2/SpeechOrchestrator.kt
+    - Main coordinator for V2 system
+    - Integrates wakeup, recording, LLM, TTS, behaviors
+
+14. sdkdemo/.../voicedialogue/v2/LLMClient.kt
+    - HTTP client for LLM server with structured JSON responses
+
+15. sdkdemo/.../voicedialogue/v2/TTSClient.kt
+    - HTTP client for TTS server
+
+16. sdkdemo/.../voicedialogue/v2/StreamingAudioPlayer.kt
+    - Streaming audio playback for TTS responses
+
+17. sdkdemo/.../voicedialogue/VoiceDialogueActivityV2.kt
+    - Activity for V2 voice dialogue UI
+    - State indicator colors, manual wakeup button, barge-in button
+
+18. AndroidManifest.xml
+    - Added VoiceDialogueActivityV2 entry
+
+19. activity_main.xml
+    - Added blue "Voice Dialogue V2 (Low Latency)" button at top
+
+================================================================================
+CRITICAL API FIX REFERENCE (BehaviorMapper.kt)
+================================================================================
+
+WRONG (causes build errors):
+- com.ubtrobot.mini.express.ExpressApi.get().express(...)
+- com.ubtrobot.mini.action.SquareActionManager.get().playAction(...)
+- com.ubtrobot.mini.light.LightApi.get().setBreath(...)
+
+CORRECT (working APIs from SDK):
+- com.ubtrobot.express.ExpressApi.get().doExpress(name, loopCount, tweenable, ResourcePolicy, listener)
+- com.ubtrobot.action.ActionApi.get().playAction(actionId, ResourcePolicy, ResponseListener)
+- com.ubtrobot.action.ActionApi.get().stopAction()
+- com.ubtrobot.led.LightApi.getInstance().normalEffect(ledList, ColorUtil.rgbColor(r,g,b), delay, effect)
+- com.ubtrobot.led.LightApi.getInstance().breathEffect(ledList, ColorUtil.rgbColor(r,g,b), period, duration, effect)
+
+Reference files for correct API usage:
+- ExpressActivity.kt - shows ExpressApi.get().doExpress() usage
+- ActionActivity.kt - shows ActionApi.get().playAction() usage
+- MainActivity.kt - shows LightApi.getInstance().normalEffect() usage
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Problem: Robot doesn't hear/responds randomly
+Solution: Check LLM server output - verify Vosk transcription is working
+
+Problem: No audio from robot speaker
+Solution: Ensure scrcpy runs with --no-audio flag
+
+Problem: TTS connection failed
+Solution: Verify ADB reverse port forwarding is active (adb reverse --list)
+
+Problem: App crashes on audio playback
+Solution: Audio files must be in externalCacheDir, not internal storage
+
+Problem: Weather not working
+Solution: Uses wttr.in (free, no API key). Check internet connection.
+
+================================================================================
+EASY LAUNCH - USE THESE BATCH FILES
+================================================================================
+
+For the easiest experience, use the provided batch files:
+
+1. FIRST TIME ONLY - Build and install the app:
+   Double-click: build_and_install.bat
+
+2. EVERY TIME - Launch servers and app:
+   Double-click: launch_voice_dialogue.bat
+
+   This will:
+   - Stop any existing Python servers
+   - Start TTS server (port 5000)
+   - Start LLM server (port 8080)
+   - Setup ADB port forwarding
+   - Launch the app on robot
+
+3. TO STOP SERVERS:
+   Double-click: stop_servers.bat
+
+================================================================================
+QUICK START COMMAND SEQUENCE FOR CLAUDE
+================================================================================
+
+1. Kill existing Python processes:
+   powershell -Command "Stop-Process -Name python -Force -ErrorAction SilentlyContinue"
+
+2. Start TTS server (background):
+   cd "C:\Users\wissem.malleh\Downloads\mini_libs_robot_third_sdk v1.0.6\mini_libs_robot_third_sdk\tts_server" && python -u server.py
+
+3. Start LLM server (background):
+   cd "C:\Users\wissem.malleh\Downloads\mini_libs_robot_third_sdk v1.0.6\mini_libs_robot_third_sdk\llm_server" && python -u server.py
+
+4. Setup ADB reverse:
+   powershell -Command "& 'C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe' reverse tcp:8080 tcp:8080; & 'C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe' reverse tcp:5000 tcp:5000"
+
+5. Build and install:
+   powershell -Command "Set-Item -Path Env:JAVA_HOME -Value 'C:\Program Files\Android\Android Studio\jbr'; Set-Location 'C:\Users\wissem.malleh\Downloads\mini_libs_robot_third_sdk v1.0.6\mini_libs_robot_third_sdk'; & .\gradlew.bat :sdkdemo:installDebug"
+
+6. Launch app:
+   powershell -Command "& 'C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe' shell am start -n com.ubtrobot.mini.sdkdemo/.MainActivity"
+
+================================================================================
+BASH-COMPATIBLE COMMANDS FOR CLAUDE CODE
+================================================================================
+
+Build app (uses existing build_app.bat):
+   cmd //c "C:\\Users\\wissem.malleh\\Downloads\\mini_libs_robot_third_sdk v1.0.6\\mini_libs_robot_third_sdk\\build_app.bat"
+
+Install APK:
+   "C:/Users/wissem.malleh/AppData/Local/Android/Sdk/platform-tools/adb.exe" install -r "C:/Users/wissem.malleh/Downloads/mini_libs_robot_third_sdk v1.0.6/mini_libs_robot_third_sdk/sdkdemo/build/outputs/apk/debug/sdkdemo-debug.apk"
+
+ADB reverse port forwarding:
+   "C:/Users/wissem.malleh/AppData/Local/Android/Sdk/platform-tools/adb.exe" reverse tcp:5000 tcp:5000
+   "C:/Users/wissem.malleh/AppData/Local/Android/Sdk/platform-tools/adb.exe" reverse tcp:8080 tcp:8080
+
+Launch app:
+   "C:/Users/wissem.malleh/AppData/Local/Android/Sdk/platform-tools/adb.exe" shell am start -n com.ubtrobot.mini.sdkdemo/.MainActivity
+
+Check servers:
+   curl -s http://127.0.0.1:5000/health
+   curl -s http://127.0.0.1:8080/health
+
+================================================================================
+VOICE COMMANDS THE ROBOT UNDERSTANDS
+================================================================================
+
+English Commands:
+- "dance" - Robot performs a dance
+- "wave" - Robot waves
+- "hands up" / "raise hands" - Robot raises hands
+- "clap" - Robot claps
+- "bow" - Robot bows
+- "what time is it" - Robot tells the time
+- "what's the weather" - Robot tells the weather
+- "what's your name" - Robot introduces itself
+- "tell me a joke" - Robot tells a joke
+- "goodbye" / "bye" / "stop" - End conversation
+
+German Commands:
+- "tanz" / "tanzen" - Robot performs a dance
+- "wink" / "winke" - Robot waves
+- "hande hoch" / "arme hoch" - Robot raises hands
+- "klatsch" - Robot claps
+- "verbeugen" - Robot bows
+- "wie spat ist es" - Robot tells the time
+- "wie ist das wetter" - Robot tells the weather
+- "wie heisst du" - Robot introduces itself
+- "erzahl einen witz" - Robot tells a joke
+- "tschuss" / "auf wiedersehen" - End conversation
+
+================================================================================
+RECENT UPDATES (2026-02-05)
+================================================================================
+
+1. UI Translation:
+   - All Chinese text translated to English
+   - "开始录音" -> "Recording started"
+   - "正在录音" -> "Recording..."
+   - "停止录音成功" -> "Recording stopped"
+   - "待开发" -> "Under Development"
+
+2. Action Commands:
+   - Added "hands up" command support
+   - Added "clap" command support
+   - Added "bow" command support
+   - Improved German action commands
+
+3. Back Button:
+   - VoiceDialogueActivityV3 now has a back button to return to main menu
+
+4. Server Health Checks:
+   - VoiceDialogueActivityV3 checks server connectivity on startup
+   - Shows helpful error message if servers are not running
+
+5. Launcher Scripts:
+   - launch_voice_dialogue.bat - One-click launch (servers + app)
+   - build_and_install.bat - Build and install the app
+   - stop_servers.bat - Stop all Python servers
+
+================================================================================

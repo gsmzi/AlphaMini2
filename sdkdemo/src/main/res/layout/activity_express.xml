@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ExpressActivity">
+<Button
+    android:id="@+id/btn_express"
+    android:layout_margin="10dp"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toTopOf="parent"
+    android:text="Default"
+    android:onClick="expressNormal"/>
+
+    <Button
+        android:id="@+id/btn_express_normal"
+        android:layout_margin="10dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:text="Default"
+        android:onClick="expressNormal"/>
+
+    <Button
+        android:id="@+id/btn_express_Smile"
+        android:layout_margin="10dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toRightOf="@+id/btn_express_normal"
+        app:layout_constraintTop_toTopOf="parent"
+        android:text="Smile"
+        android:onClick="expressSmile"/>
+
+    <Button
+        android:id="@+id/btn_express_think"
+        android:layout_margin="10dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toRightOf="@+id/btn_express_Smile"
+        app:layout_constraintTop_toTopOf="parent"
+        android:text="Blink"
+        android:onClick="expressEye"/>
+
+    <EditText
+        android:id="@+id/et_express_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        app:layout_constraintTop_toBottomOf="@+id/btn_express_normal"
+        app:layout_constraintStart_toStartOf="parent"
+        android:hint="Enter expression name"/>
+
+    <Button
+        android:id="@+id/btn_express_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toRightOf="@+id/et_express_name"
+        android:layout_marginLeft="20dp"
+        app:layout_constraintBaseline_toBaselineOf="@+id/et_express_name"
+        android:onClick="expressDone"
+        android:text="Play"/>
+    <EditText
+        android:id="@+id/et_customize_express_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        app:layout_constraintTop_toBottomOf="@+id/et_express_name"
+        app:layout_constraintStart_toStartOf="parent"
+        android:hint="Custom (path: sdcard/customize/expresss)"/>
+
+    <Button
+        android:id="@+id/btn_customize_express_start"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toRightOf="@+id/et_customize_express_name"
+        android:layout_marginLeft="20dp"
+        app:layout_constraintBaseline_toBaselineOf="@+id/et_customize_express_name"
+        android:onClick="customizeExpressDone"
+        android:text="Play Custom"/>
+    <ScrollView
+        android:id="@+id/sv_express_log"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:minHeight="100dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/et_customize_express_name"
+        >
+        <TextView
+            android:id="@+id/tv_express_log"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="100dp"
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"
+            android:background="#E1E1E1"/>
+    </ScrollView>
+    <Button
+        android:id="@+id/btn_express_list"
+        android:layout_width="200dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_margin="10dp"
+        android:onClick="expressList"
+        android:text="Get Expression List"/>
+</androidx.constraintlayout.widget.ConstraintLayout>

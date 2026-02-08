@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+   >
+
+    <uses-permission android:name="com.ubtrobot.servicebus.permission.SERVICE_BUS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="com.ubtrobot.master.permission.MASTER" />
+    <uses-permission android:name="com.ubtrobot.master.permission.MASTER_SYSTEM_SERVICE" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:name=".DemoApplication"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:theme="@style/Theme.Wkvision">
+        <receiver
+            android:name=".BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="com.ubtrobot.mini.sdkdemo.SPEAK_TEST" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name=".voicedialogue.VoiceDialogueService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
+
+        <activity
+            android:name=".MotorActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ActionActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ExpressActivity"
+            android:exported="false" />
+        <activity
+            android:name=".BtnEventActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SysStatusActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Wkvision" />
+        <activity
+            android:name=".voicedialogue.VoiceDialogueActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Wkvision" />
+        <activity
+            android:name=".voicedialogue.VoiceDialogueActivityV2"
+            android:exported="false"
+            android:theme="@style/Theme.Wkvision" />
+        <activity
+            android:name=".voicedialogue.VoiceDialogueActivityV3"
+            android:exported="true"
+            android:theme="@style/Theme.Wkvision" />
+        <activity
+            android:name=".MainActivity"
+            android:label="悟空SDK Demo"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

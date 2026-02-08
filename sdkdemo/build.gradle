@@ -1,0 +1,107 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.ubtrobot.mini.sdkdemo'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.ubtrobot.mini.sdkdemo"
+        minSdk 30
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters 'arm64-v8a'
+        }
+        externalNativeBuild {
+            ndkBuild {
+                arguments "APP_SHORT_COMMANDS=true", "LOCAL_SHORT_COMMANDS=true"
+            }
+        }
+
+        // Embed git commit hash in BuildConfig for debugging "wrong code" issues
+        def gitHash = "unknown"
+        try {
+            gitHash = 'git rev-parse --short HEAD'.execute().text.trim()
+            if (gitHash.isEmpty()) gitHash = "no-git"
+        } catch (Exception ignored) {
+            gitHash = "no-git"
+        }
+        buildConfigField "String", "GIT_HASH", "\"${gitHash}\""
+    }
+    ndkVersion "26.3.11579264"
+    repositories {
+        flatDir { dirs 'libs' }
+    }
+    buildFeatures{
+        buildConfig true
+        viewBinding true
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    externalNativeBuild {
+        ndkBuild {
+            path "src/main/jni/Android.mk"
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = '11'
+    }
+    aaptOptions {
+        noCompress 'model', 'scorer', 'fst', 'conf'
+    }
+    signingConfigs {
+        release {
+            storeFile file("wukong_sdk.keystore")
+            storePassword "ubt_android"
+            keyAlias "wk_sdk_demo"
+            keyPassword "ubt_android"
+        }
+        debug {
+            storeFile file("wukong_sdk.keystore")
+            storePassword "ubt_android"
+            keyAlias "wk_sdk_demo"
+            keyPassword "ubt_android"
+        }
+    }
+}
+
+dependencies {
+    implementation(name: 'opensdk-v1.0.6', ext: 'aar')
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+
+    // Vosk offline speech recognition (local AAR + JNA AAR with native libs)
+    implementation(name: 'vosk-android-0.3.47', ext: 'aar')
+    implementation(name: 'jna-5.13.0', ext: 'aar')
+
+    implementation 'androidx.core:core-ktx:1.9.0'
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.10.0'
+    implementation 'androidx.activity:activity:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    implementation 'androidx.navigation:navigation-fragment-ktx:2.6.0'
+    implementation 'androidx.navigation:navigation-ui-ktx:2.6.0'
+
+    // Google Cloud TTS via REST API
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // Coroutines for async operations
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+}
