@@ -1144,6 +1144,33 @@ class ContinuousSpeechOrchestrator(
         Log.d(TAG, "Mic capture allowed = $allowed")
     }
 
+    /**
+     * Speak arbitrary text using the embedded TTS engine (for debug/testing).
+     * Reuses the orchestrator's existing engine to avoid native library conflicts.
+     */
+    fun speakTest(text: String) {
+        Log.d(TAG, "speakTest: '$text'")
+        scope.launch(Dispatchers.IO) {
+            try {
+                val ready = localReady.await()
+                if (!ready || embeddedTtsEngine?.isReady != true) {
+                    Log.e(TAG, "speakTest: TTS not ready")
+                    return@launch
+                }
+                val pcm = embeddedTtsEngine?.synthesize(text)
+                if (pcm != null && pcm.isNotEmpty()) {
+                    Log.d(TAG, "speakTest: synthesized ${pcm.size} bytes, playing...")
+                    pcmPlayer?.playPcmBytes(pcm)
+                    Log.d(TAG, "speakTest: playback complete")
+                } else {
+                    Log.e(TAG, "speakTest: synthesis returned null/empty")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "speakTest: exception", e)
+            }
+        }
+    }
+
     private fun handleStateTransition(oldState: ContinuousState, newState: ContinuousState) {
         // Update behavior based on state (wrapped in coroutine since behavior methods are suspend)
         scope.launch {

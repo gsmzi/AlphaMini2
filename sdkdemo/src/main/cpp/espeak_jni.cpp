@@ -10,7 +10,7 @@
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, LOG_TAG, __VA_ARGS__)
 
-static std::mutex gMutex;
+static std::recursive_mutex gMutex;
 static std::vector<int16_t> gSamples;
 static bool gInitialized = false;
 
@@ -18,7 +18,7 @@ static int SynthCallback(short *wav, int numsamples, espeak_EVENT * /*events*/) 
     if (wav == nullptr || numsamples <= 0) {
         return 0;
     }
-    std::lock_guard<std::mutex> lock(gMutex);
+    std::lock_guard<std::recursive_mutex> lock(gMutex);
     gSamples.insert(gSamples.end(), wav, wav + numsamples);
     return 0;
 }
@@ -70,7 +70,7 @@ Java_com_ubtrobot_mini_sdkdemo_voicedialogue_v2_EmbeddedTtsEngine_nativeSynthesi
     }
 
     const char *utf8 = env->GetStringUTFChars(text, nullptr);
-    std::lock_guard<std::mutex> lock(gMutex);
+    std::lock_guard<std::recursive_mutex> lock(gMutex);
     gSamples.clear();
 
     unsigned int uniqueId = 0;
@@ -99,7 +99,7 @@ Java_com_ubtrobot_mini_sdkdemo_voicedialogue_v2_EmbeddedTtsEngine_nativeSynthesi
 extern "C" JNIEXPORT void JNICALL
 Java_com_ubtrobot_mini_sdkdemo_voicedialogue_v2_EmbeddedTtsEngine_nativeShutdown(
         JNIEnv * /*env*/, jobject /*thiz*/) {
-    std::lock_guard<std::mutex> lock(gMutex);
+    std::lock_guard<std::recursive_mutex> lock(gMutex);
     gSamples.clear();
     gInitialized = false;
 }

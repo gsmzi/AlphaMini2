@@ -74,6 +74,7 @@
         <activity
             android:name=".voicedialogue.VoiceDialogueActivityV3"
             android:exported="true"
+            android:launchMode="singleTop"
             android:theme="@style/Theme.Wkvision" />
         <activity
             android:name=".MainActivity"

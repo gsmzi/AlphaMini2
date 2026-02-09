@@ -3,6 +3,7 @@ package com.ubtrobot.mini.sdkdemo.voicedialogue
 import android.Manifest
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
@@ -85,6 +86,26 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
         initializeViews()
         setupLanguageSpinner()
         checkServersAndPermissions()
+
+        // Handle speak test from broadcast
+        handleSpeakTestIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleSpeakTestIntent(intent)
+    }
+
+    private fun handleSpeakTestIntent(intent: Intent?) {
+        val speakText = intent?.getStringExtra("speak_test_text")
+        if (speakText != null) {
+            Log.d(TAG, "SPEAK_TEST: will speak '$speakText' once orchestrator ready")
+            lifecycleScope.launch {
+                // Wait a moment for orchestrator to init if needed
+                kotlinx.coroutines.delay(2000L)
+                orchestrator?.speakTest(speakText)
+            }
+        }
     }
 
     private fun initializeViews() {
