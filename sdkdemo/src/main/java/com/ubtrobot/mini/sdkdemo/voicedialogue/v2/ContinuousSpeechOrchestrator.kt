@@ -1,14 +1,19 @@
 ﻿package com.ubtrobot.mini.sdkdemo.voicedialogue.v2
 
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.MediaPlayer
 import android.util.Log
 import com.ubtrobot.mini.sdkdemo.BuildConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CompletableDeferred
+import kotlin.coroutines.resume
 
 /**
  * â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -114,6 +119,14 @@ class ContinuousSpeechOrchestrator(
     @Volatile
     private var allowMicCapture = false
 
+    // Google Translate TTS (online, natural voice)
+    private val googleTts = GoogleTranslateTts()
+    @Volatile
+    private var activeMediaPlayer: MediaPlayer? = null
+
+    /** Callback invoked when the user switches language via voice command. */
+    var onLanguageChanged: ((DialogueConfig.Language) -> Unit)? = null
+
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     // COROUTINE MANAGEMENT
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -150,7 +163,7 @@ class ContinuousSpeechOrchestrator(
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     fun initialize() {
-        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} TTS=EmbeddedTtsEngine")
+        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} TTS=GoogleTranslateTts")
 
         // Initialize reusable audio components
         initializeAudioComponents()
@@ -295,6 +308,7 @@ class ContinuousSpeechOrchestrator(
         wakeupManager.stop()
         audioRecorder?.stopRecording()
         audioPlayer?.stop()
+        stopActiveTts()
         behaviorMapper.stopAllBehaviors()
 
         stateMachine.forceState(ContinuousState.IDLE, "stop() called")
@@ -329,9 +343,10 @@ class ContinuousSpeechOrchestrator(
         Log.d(TAG, "Barge-in triggered!")
         bargeInRequested.set(true)
 
-        // Stop playback immediately
+        // Stop playback immediately (all TTS paths)
         audioPlayer?.stop()
         pcmPlayer?.stop()
+        stopActiveTts()
         behaviorMapper.stopAllBehaviors()
 
         // Transition to listening (within same session)
@@ -685,6 +700,7 @@ class ContinuousSpeechOrchestrator(
         // Stop any existing playback before starting new audio
         audioPlayer?.stop()
         pcmPlayer?.stop()
+        stopActiveTts()
 
         stateMachine.transition(ContinuousState.SPEAKING, "playing audio")
 
@@ -727,6 +743,7 @@ class ContinuousSpeechOrchestrator(
         // CRITICAL: Stop any existing playback before starting new speech
         audioPlayer?.stop()
         pcmPlayer?.stop()
+        stopActiveTts()
 
         stateMachine.transition(ContinuousState.SPEAKING, "speaking")
 
@@ -738,30 +755,20 @@ class ContinuousSpeechOrchestrator(
         val behaviorPlan = behaviorMapper.createBehaviorPlan(response)
 
         if (config.useLocalProcessing) {
-            // LOCAL PATH: embedded TTS -> PCM -> AudioTrack
+            // LOCAL PATH: Google Translate TTS (online, natural voice)
             metrics.tTtsStart = System.currentTimeMillis()
 
-            val pcm = withContext(Dispatchers.IO) {
-                embeddedTtsEngine?.synthesize(formattedSpeech)
+            // Estimate duration for behaviors (rough: ~80ms per character)
+            val estimatedDurationMs = (formattedSpeech.length * 80L).coerceIn(1000L, 30000L)
+            withContext(Dispatchers.Main) {
+                behaviorMapper.executeBehaviorPlan(behaviorPlan, estimatedDurationMs) {}
             }
-            if (pcm == null) {
-                Log.e(TAG, "Embedded TTS synth failed")
+
+            val ok = speakLocalText(formattedSpeech)
+            if (!ok) {
+                Log.e(TAG, "Google TTS failed for speakResponse")
                 handleTTSError()
                 return
-            }
-
-            val durationMs = estimatePcmDurationMs(pcm.size)
-
-            // Start behaviors (expression, action, lights) alongside speech
-            withContext(Dispatchers.Main) {
-                behaviorMapper.executeBehaviorPlan(behaviorPlan, durationMs) {}
-            }
-
-            val success = withContext(Dispatchers.IO) {
-                pcmPlayer?.playPcmBytes(pcm) ?: false
-            }
-            if (!success) {
-                Log.e(TAG, "PCM playback failed or stopped")
             }
 
             metrics.tAudioEnd = System.currentTimeMillis()
@@ -913,8 +920,8 @@ class ContinuousSpeechOrchestrator(
 
         stateMachine.transition(ContinuousState.PROMPTING, "silence prompt")
 
-        // Choose a random prompt
-        val prompt = config.getSilencePrompts().random()
+        // Choose a random prompt in the current language
+        val prompt = config.getSilencePrompts(currentLanguage).random()
         listener?.onResponse(prompt)
 
         if (config.useLocalProcessing) {
@@ -947,7 +954,7 @@ class ContinuousSpeechOrchestrator(
     }
 
     private suspend fun sayGoodbye() {
-        val phrase = config.getSessionEndPhrases().random()
+        val phrase = config.getSessionEndPhrases(currentLanguage).random()
         listener?.onResponse(phrase)
 
         // Set happy expression for goodbye
@@ -956,7 +963,7 @@ class ContinuousSpeechOrchestrator(
         if (config.useLocalProcessing) {
             speakLocalText(phrase)
         } else {
-            val ttsCode = if (config.language == DialogueConfig.Language.DE) "de-DE" else "en-US"
+            val ttsCode = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
             val ttsData = ttsClient.synthesize(phrase, ttsCode)
             if (ttsData != null) {
                 playAudioData(ttsData)
@@ -1068,7 +1075,7 @@ class ContinuousSpeechOrchestrator(
         if (config.useLocalProcessing) {
             speakLocalText(message)
         } else {
-            val ttsCode = if (config.language == DialogueConfig.Language.DE) "de-DE" else "en-US"
+            val ttsCode = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
             val ttsData = ttsClient.synthesize(message, ttsCode)
             if (ttsData != null) {
                 playAudioData(ttsData)
@@ -1088,10 +1095,78 @@ class ContinuousSpeechOrchestrator(
         }
     }
 
-    private suspend fun speakLocalText(text: String): Boolean = withContext(Dispatchers.IO) {
-        if (text.isBlank()) return@withContext true
-        val pcm = embeddedTtsEngine?.synthesize(text) ?: return@withContext false
-        return@withContext (pcmPlayer?.playPcmBytes(pcm) ?: false)
+    /**
+     * Play MP3 bytes via MediaPlayer and suspend until complete. Returns true on success.
+     */
+    private suspend fun playMp3AndWait(mp3Bytes: ByteArray): Boolean {
+        return suspendCancellableCoroutine { cont ->
+            try {
+                val tmpFile = File(context.cacheDir, "tts_${System.currentTimeMillis()}.mp3")
+                tmpFile.writeBytes(mp3Bytes)
+
+                val mp = MediaPlayer().apply {
+                    setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .build()
+                    )
+                    setDataSource(tmpFile.absolutePath)
+                    setOnCompletionListener {
+                        Log.d(TAG, "MediaPlayer playback completed")
+                        activeMediaPlayer = null
+                        tmpFile.delete()
+                        it.release()
+                        if (cont.isActive) cont.resume(true)
+                    }
+                    setOnErrorListener { mp, what, extra ->
+                        Log.e(TAG, "MediaPlayer error: what=$what extra=$extra")
+                        activeMediaPlayer = null
+                        tmpFile.delete()
+                        mp.release()
+                        if (cont.isActive) cont.resume(false)
+                        true
+                    }
+                    prepare()
+                }
+                activeMediaPlayer = mp
+                mp.start()
+                Log.d(TAG, "MediaPlayer started (${mp3Bytes.size} bytes, ${mp.duration}ms)")
+
+                cont.invokeOnCancellation {
+                    Log.d(TAG, "MediaPlayer cancelled")
+                    activeMediaPlayer = null
+                    try { mp.stop(); mp.release() } catch (_: Exception) {}
+                    tmpFile.delete()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "MediaPlayer setup failed", e)
+                if (cont.isActive) cont.resume(false)
+            }
+        }
+    }
+
+    /**
+     * Speak text using Google Translate TTS (online, natural voice).
+     */
+    private suspend fun speakLocalText(text: String): Boolean {
+        if (text.isBlank()) return true
+
+        val langCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+        Log.d(TAG, "Google TTS speaking: '${text.take(60)}...' [$langCode]")
+
+        val mp3 = try {
+            googleTts.synthesize(text, langCode)
+        } catch (e: Exception) {
+            Log.e(TAG, "Google TTS synthesis failed", e)
+            null
+        }
+        if (mp3 == null || mp3.isEmpty()) {
+            Log.e(TAG, "Google TTS returned null/empty for: '${text.take(60)}'")
+            return false
+        }
+
+        return playMp3AndWait(mp3)
     }
 
     private fun estimatePcmDurationMs(byteCount: Int, sampleRate: Int = 16000): Long {
@@ -1101,42 +1176,109 @@ class ContinuousSpeechOrchestrator(
     }
 
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // STOP ACTIVE TTS
+
+    /**
+     * Stop active Google TTS MediaPlayer playback (for barge-in / stop / cancel).
+     */
+    private fun stopActiveTts() {
+        activeMediaPlayer?.let { mp ->
+            try {
+                mp.stop()
+                mp.release()
+            } catch (_: Exception) {}
+            activeMediaPlayer = null
+        }
+    }
+
     // HELPERS
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     private fun isStopPhrase(text: String): Boolean {
         val lowerText = text.lowercase().trim()
-        return config.getStopPhrases().any { phrase ->
+        return config.getStopPhrases(currentLanguage).any { phrase ->
             lowerText.contains(phrase.lowercase())
         }
     }
 
-    private fun handleLanguageSwitch(transcription: String): Boolean {
-        val text = transcription.lowercase()
-        val isSwitch = listOf("switch", "change", "wechseln", "sprache").any { text.contains(it) }
-        if (!isSwitch) return false
+    /**
+     * Detect "switch" / "wechseln" as exact words (word-boundary safe).
+     * Toggles language, persists, notifies UI, speaks confirmation, resumes listening.
+     */
+    private suspend fun handleLanguageSwitch(transcription: String): Boolean {
+        val words = transcription.lowercase().trim().split("\\s+".toRegex())
+        val hasTrigger = words.any { it == "switch" || it == "wechseln" }
+        if (!hasTrigger) return false
 
+        Log.d(TAG, "Language switch command detected in: '$transcription'")
+
+        // Stop any ongoing TTS before switching
+        pcmPlayer?.stop()
+        stopActiveTts()
+
+        // Toggle language
         currentLanguage = if (currentLanguage == DialogueConfig.Language.EN) {
             DialogueConfig.Language.DE
         } else {
             DialogueConfig.Language.EN
         }
 
+        // Update language-dependent components
         speechFormatter = SpeechFormatter(currentLanguage)
-        embeddedTtsEngine?.setLanguage(currentLanguage)
+        LanguagePrefs.set(context, currentLanguage)
 
         val confirmation = if (currentLanguage == DialogueConfig.Language.DE) {
-            "Okay, ich wechsle auf Deutsch."
+            "Wechsel zu Deutsch."
         } else {
-            "Okay, switching to English."
+            "Switched to English."
         }
 
-        // Notify UI and attempt to speak confirmation
+        Log.d(TAG, "Language switched to ${currentLanguage.name}")
+
+        // Notify UI
         listener?.onResponse(confirmation)
-        scope.launch(Dispatchers.IO) {
+        onLanguageChanged?.invoke(currentLanguage)
+
+        // Speak confirmation
+        stateMachine.transition(ContinuousState.SPEAKING, "language switch")
+        speakLocalText(confirmation)
+
+        // Resume listening for follow-up
+        if (sessionActive.get()) {
+            stateMachine.transition(ContinuousState.LISTENING_FOR_FOLLOWUP, "language switch done")
+            startSilenceMonitor()
+            scope.launch {
+                delay(500L)
+                if (stateMachine.currentState == ContinuousState.LISTENING_FOR_FOLLOWUP) {
+                    startCapturing()
+                }
+            }
+        }
+
+        return true
+    }
+
+    /**
+     * Switch language programmatically (from UI spinner). Fast - no model reload needed.
+     */
+    fun switchLanguage(newLanguage: DialogueConfig.Language) {
+        if (newLanguage == currentLanguage) return
+        Log.d(TAG, "switchLanguage: ${currentLanguage.name} -> ${newLanguage.name}")
+
+        currentLanguage = newLanguage
+        speechFormatter = SpeechFormatter(currentLanguage)
+        LanguagePrefs.set(context, currentLanguage)
+
+        val confirmation = if (currentLanguage == DialogueConfig.Language.DE) {
+            "Wechsel zu Deutsch."
+        } else {
+            "Switched to English."
+        }
+        listener?.onResponse(confirmation)
+
+        scope.launch {
             speakLocalText(confirmation)
         }
-        return true
     }
 
     fun setMicCaptureAllowed(allowed: Boolean) {
@@ -1145,26 +1287,37 @@ class ContinuousSpeechOrchestrator(
     }
 
     /**
-     * Speak arbitrary text using the embedded TTS engine (for debug/testing).
-     * Reuses the orchestrator's existing engine to avoid native library conflicts.
+     * Speak the boot greeting once. Call after start().
+     * Uses Google Translate TTS (online).
+     */
+    fun speakBootGreeting() {
+        val greeting = if (currentLanguage == DialogueConfig.Language.DE) {
+            "System bereit. Sag Wechseln für Englisch."
+        } else {
+            "System ready. Say switch for German."
+        }
+        Log.d(TAG, "Boot greeting (${currentLanguage.name}): '$greeting'")
+        listener?.onResponse(greeting)
+
+        scope.launch {
+            val ok = speakLocalText(greeting)
+            if (ok) {
+                Log.d(TAG, "Boot greeting spoken via Google TTS")
+            } else {
+                Log.e(TAG, "Boot greeting: Google TTS failed")
+            }
+        }
+    }
+
+    /**
+     * Speak arbitrary text for debug/testing. Uses Google Translate TTS.
      */
     fun speakTest(text: String) {
         Log.d(TAG, "speakTest: '$text'")
-        scope.launch(Dispatchers.IO) {
+        scope.launch {
             try {
-                val ready = localReady.await()
-                if (!ready || embeddedTtsEngine?.isReady != true) {
-                    Log.e(TAG, "speakTest: TTS not ready")
-                    return@launch
-                }
-                val pcm = embeddedTtsEngine?.synthesize(text)
-                if (pcm != null && pcm.isNotEmpty()) {
-                    Log.d(TAG, "speakTest: synthesized ${pcm.size} bytes, playing...")
-                    pcmPlayer?.playPcmBytes(pcm)
-                    Log.d(TAG, "speakTest: playback complete")
-                } else {
-                    Log.e(TAG, "speakTest: synthesis returned null/empty")
-                }
+                val ok = speakLocalText(text)
+                Log.d(TAG, "speakTest: ${if (ok) "success" else "failed"}")
             } catch (e: Exception) {
                 Log.e(TAG, "speakTest: exception", e)
             }
@@ -1201,6 +1354,7 @@ class ContinuousSpeechOrchestrator(
 
     fun release() {
         stop()
+        stopActiveTts()
         scope.cancel()
 
         audioRecorder?.release()

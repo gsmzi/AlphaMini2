@@ -19,6 +19,8 @@
     <uses-permission android:name="android.permission.CHANGE_CONFIGURATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="com.ubtrobot.master.permission.MASTER" />
     <uses-permission android:name="com.ubtrobot.master.permission.MASTER_SYSTEM_SERVICE" />
 
@@ -75,7 +77,13 @@
             android:name=".voicedialogue.VoiceDialogueActivityV3"
             android:exported="true"
             android:launchMode="singleTop"
-            android:theme="@style/Theme.Wkvision" />
+            android:theme="@style/Theme.Wkvision">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".MainActivity"
             android:label="悟空SDK Demo"

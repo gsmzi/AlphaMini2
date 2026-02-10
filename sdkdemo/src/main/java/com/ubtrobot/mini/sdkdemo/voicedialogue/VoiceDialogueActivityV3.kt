@@ -42,6 +42,9 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
     companion object {
         private const val TAG = "VoiceDialogueV3"
         private const val PERMISSION_REQUEST_CODE = 1001
+        @Volatile
+        var isAlive = false
+            private set
     }
 
     // UI Components
@@ -63,9 +66,10 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
     // Orchestrator
     private var orchestrator: ContinuousSpeechOrchestrator? = null
 
-    // Configuration
-    private var currentLanguage = DialogueConfig.Language.EN
+    // Configuration - loaded from SharedPreferences (default: DE)
+    private var currentLanguage = DialogueConfig.Language.DE
     private var isFirstLanguageSelection = true
+    private var fromBoot = false
 
     // Conversation history
     private val historyBuilder = StringBuilder()
@@ -79,9 +83,15 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        isAlive = true
         val entryTs = System.currentTimeMillis()
         Log.d(TAG, "ENTRYPOINT V3 $entryTs buildType=${BuildConfig.BUILD_TYPE} version=${BuildConfig.VERSION_NAME} appId=${BuildConfig.APPLICATION_ID} gitHash=${BuildConfig.GIT_HASH}")
         setContentView(R.layout.activity_voice_dialogue_v3)
+
+        // Load persisted language (default: DE)
+        currentLanguage = LanguagePrefs.get(this)
+        fromBoot = intent?.getBooleanExtra("from_boot", false) == true
+        Log.d(TAG, "Language from prefs: ${currentLanguage.name}, fromBoot=$fromBoot")
 
         initializeViews()
         setupLanguageSpinner()
@@ -153,6 +163,9 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         languageSpinner.adapter = adapter
 
+        // Set spinner to match persisted language
+        languageSpinner.setSelection(if (currentLanguage == DialogueConfig.Language.DE) 1 else 0)
+
         languageSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val newLanguage = if (position == 1) {
@@ -161,16 +174,16 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
                     DialogueConfig.Language.EN
                 }
 
-                // Skip restart on initial setup or if language hasn't changed
+                // Skip on initial setup or if language hasn't changed
                 if (isFirstLanguageSelection) {
                     isFirstLanguageSelection = false
-                    currentLanguage = newLanguage
                     return
                 }
 
                 if (newLanguage != currentLanguage) {
                     currentLanguage = newLanguage
-                    restartOrchestrator()
+                    // Fast switch: no orchestrator restart needed
+                    orchestrator?.switchLanguage(newLanguage)
                 }
             }
 
@@ -269,9 +282,21 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
             wakeWords = listOf("hello wukong", "hi wukong", "wukong")
         )
 
-        Log.d(TAG, "ORCH_FACTORY=ContinuousSpeechOrchestrator")
+        Log.d(TAG, "ORCH_FACTORY=ContinuousSpeechOrchestrator lang=${currentLanguage.name}")
         orchestrator = ContinuousSpeechOrchestrator(this, config).apply {
             setListener(this@VoiceDialogueActivityV3)
+
+            // Sync spinner when language changes via voice command
+            onLanguageChanged = { newLang ->
+                runOnUiThread {
+                    currentLanguage = newLang
+                    isFirstLanguageSelection = true // suppress spinner callback
+                    languageSpinner.setSelection(if (newLang == DialogueConfig.Language.DE) 1 else 0)
+                    isFirstLanguageSelection = false
+                    Log.d(TAG, "Spinner synced to ${newLang.name} (voice switch)")
+                }
+            }
+
             initialize()
         }
 
@@ -285,16 +310,14 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
         // Enable mic capture and start listening for wakeup
         orchestrator?.setMicCaptureAllowed(true)
         orchestrator?.start()
-        updateSessionStatus("Ready - Say wake word or long-press chest button")
-    }
 
-    private fun restartOrchestrator() {
-        orchestrator?.release()
-        historyBuilder.clear()
-        conversationHistory.text = ""
-        turnCount = 0
-        updateTurnCounter()
-        initializeOrchestrator()
+        // Speak boot greeting if launched from boot
+        if (fromBoot) {
+            fromBoot = false // only once
+            orchestrator?.speakBootGreeting()
+        }
+
+        updateSessionStatus("Ready - Say wake word or long-press chest button")
     }
 
     // ═══════════════════════════════════════════════════════════════
@@ -431,6 +454,7 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
     }
 
     override fun onDestroy() {
+        isAlive = false
         super.onDestroy()
         orchestrator?.release()
         orchestrator = null

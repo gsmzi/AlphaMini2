@@ -147,22 +147,22 @@ data class ContinuousDialogueConfig(
         )
     }
 
-    fun getStopPhrases(): List<String> = when (language) {
+    fun getStopPhrases(lang: DialogueConfig.Language = language): List<String> = when (lang) {
         DialogueConfig.Language.EN -> STOP_PHRASES_EN
         DialogueConfig.Language.DE -> STOP_PHRASES_DE
     }
 
-    fun getFollowUpPrompts(): List<String> = when (language) {
+    fun getFollowUpPrompts(lang: DialogueConfig.Language = language): List<String> = when (lang) {
         DialogueConfig.Language.EN -> FOLLOWUP_PROMPTS_EN
         DialogueConfig.Language.DE -> FOLLOWUP_PROMPTS_DE
     }
 
-    fun getSilencePrompts(): List<String> = when (language) {
+    fun getSilencePrompts(lang: DialogueConfig.Language = language): List<String> = when (lang) {
         DialogueConfig.Language.EN -> SILENCE_PROMPTS_EN
         DialogueConfig.Language.DE -> SILENCE_PROMPTS_DE
     }
 
-    fun getSessionEndPhrases(): List<String> = when (language) {
+    fun getSessionEndPhrases(lang: DialogueConfig.Language = language): List<String> = when (lang) {
         DialogueConfig.Language.EN -> SESSION_END_EN
         DialogueConfig.Language.DE -> SESSION_END_DE
     }

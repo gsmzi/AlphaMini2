@@ -17,7 +17,17 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
-                Log.d(TAG, "BOOT_COMPLETED received; starting VoiceDialogueService")
+                Log.d(TAG, "BOOT_COMPLETED received — launching Activity directly + starting Service")
+                // Launch Activity DIRECTLY from BroadcastReceiver to use the
+                // BOOT_COMPLETED activity-start exemption (lost if we go through Service)
+                val activityIntent = Intent(context, VoiceDialogueActivityV3::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                    putExtra("from_boot", true)
+                }
+                context.startActivity(activityIntent)
+                Log.d(TAG, "Activity launch intent sent")
+
+                // Also start the foreground service for process keep-alive + retry
                 val serviceIntent = Intent(context, VoiceDialogueService::class.java)
                 serviceIntent.putExtra("boot_time_ms", System.currentTimeMillis())
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
