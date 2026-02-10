@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.*
@@ -137,6 +138,11 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
         // Back button - return to main menu
         backButton.setOnClickListener {
             finish()
+        }
+
+        // WiFi settings button
+        findViewById<ImageButton>(R.id.wifiButton).setOnClickListener {
+            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
         }
 
         // Button listeners

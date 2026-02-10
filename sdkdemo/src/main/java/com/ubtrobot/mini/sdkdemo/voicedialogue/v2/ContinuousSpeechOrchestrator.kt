@@ -119,8 +119,8 @@ class ContinuousSpeechOrchestrator(
     @Volatile
     private var allowMicCapture = false
 
-    // Google Translate TTS (online, natural voice)
-    private val googleTts = GoogleTranslateTts()
+    // Edge TTS (online, young male voice)
+    private val edgeTts = EdgeTts()
     @Volatile
     private var activeMediaPlayer: MediaPlayer? = null
 
@@ -163,7 +163,7 @@ class ContinuousSpeechOrchestrator(
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     fun initialize() {
-        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} TTS=GoogleTranslateTts")
+        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} TTS=EdgeTts")
 
         // Initialize reusable audio components
         initializeAudioComponents()
@@ -1156,7 +1156,7 @@ class ContinuousSpeechOrchestrator(
         Log.d(TAG, "Google TTS speaking: '${text.take(60)}...' [$langCode]")
 
         val mp3 = try {
-            googleTts.synthesize(text, langCode)
+            edgeTts.synthesize(text, langCode)
         } catch (e: Exception) {
             Log.e(TAG, "Google TTS synthesis failed", e)
             null
