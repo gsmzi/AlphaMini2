@@ -87,11 +87,13 @@ class ContinuousStateMachine(
             ContinuousState.CAPTURING to setOf(
                 ContinuousState.THINKING,
                 ContinuousState.LISTENING,  // False trigger
+                ContinuousState.LISTENING_FOR_FOLLOWUP,  // No speech / error recovery
                 ContinuousState.ERROR,
                 ContinuousState.IDLE
             ),
             ContinuousState.THINKING to setOf(
                 ContinuousState.SPEAKING,
+                ContinuousState.LISTENING_FOR_FOLLOWUP,  // Error recovery / empty response
                 ContinuousState.ERROR,
                 ContinuousState.IDLE
             ),

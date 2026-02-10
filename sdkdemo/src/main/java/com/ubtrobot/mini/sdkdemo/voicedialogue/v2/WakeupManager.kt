@@ -134,6 +134,25 @@ class WakeupManager(
     }
 
     /**
+     * Pause voice wakeup to release the mic for Google STT.
+     * Button wakeup remains active.
+     */
+    fun pauseVoiceWakeup() {
+        stopVoiceWakeup()
+        Log.d(TAG, "Voice wakeup paused (mic released for STT)")
+    }
+
+    /**
+     * Resume voice wakeup after Google STT is done.
+     */
+    fun resumeVoiceWakeup() {
+        if (enableVoiceWakeup && isActive) {
+            startVoiceWakeup()
+            Log.d(TAG, "Voice wakeup resumed")
+        }
+    }
+
+    /**
      * Manually trigger wakeup (for testing)
      */
     fun triggerManualWakeup() {

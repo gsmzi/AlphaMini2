@@ -104,6 +104,7 @@ class ContinuousSpeechOrchestrator(
 
     // Local on-device components (used when useLocalProcessing = true)
     private var localRecognizer: LocalSpeechRecognizer? = null
+    private var googleStt: GoogleSpeechRecognizer? = null
     private var localResponseGenerator: LocalResponseGenerator? = null
     private var embeddedTtsEngine: EmbeddedTtsEngine? = null
     private var pcmPlayer: PcmAudioPlayer? = null
@@ -163,7 +164,7 @@ class ContinuousSpeechOrchestrator(
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     fun initialize() {
-        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} TTS=EdgeTts")
+        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} STT=GoogleSTT TTS=EdgeTts")
 
         // Initialize reusable audio components
         initializeAudioComponents()
@@ -223,38 +224,48 @@ class ContinuousSpeechOrchestrator(
 
     private fun initializeLocalComponents() {
         localResponseGenerator = LocalResponseGenerator()
-
-        localRecognizer = LocalSpeechRecognizer(context)
         embeddedTtsEngine = EmbeddedTtsEngine(context)
         pcmPlayer = PcmAudioPlayer()
 
+        // Try Google STT first (online, better accuracy); fall back to Vosk (offline)
+        googleStt = GoogleSpeechRecognizer(context).also { it.initialize() }
+
+        if (googleStt?.isReady == true) {
+            Log.d(TAG, "Using Google STT (online)")
+        } else {
+            Log.w(TAG, "Google STT not available — falling back to Vosk (offline)")
+            localRecognizer = LocalSpeechRecognizer(context)
+        }
+
         scope.launch(Dispatchers.IO) {
             try {
-                withContext(Dispatchers.Main) {
-                    listener?.onStateChanged(ContinuousState.IDLE) // Signal loading
-                }
-                Log.d(TAG, "Loading local speech recognition models...")
-
-                val loadEn = true
-                val loadDe = true
-                localRecognizer?.initialize(
-                    loadEnglish = loadEn || !loadDe,
-                    loadGerman = loadDe || !loadEn
-                ) { progress ->
-                    Log.d(TAG, "Vosk: $progress")
-                }
-
-                Log.d(TAG, "Initializing embedded TTS engine...")
-                val ttsOk = embeddedTtsEngine?.initialize(currentLanguage) == true
-                if (!ttsOk) {
+                // Load Vosk models if Google STT is not available
+                if (localRecognizer != null) {
                     withContext(Dispatchers.Main) {
-                        listener?.onError("Embedded TTS not available. Provide native libs/data.")
-                        listener?.onResponse("Embedded TTS not available. Provide native libs/data.")
+                        listener?.onStateChanged(ContinuousState.IDLE)
+                    }
+                    Log.d(TAG, "Loading Vosk speech recognition models...")
+                    localRecognizer?.initialize(
+                        loadEnglish = true,
+                        loadGerman = true
+                    ) { progress ->
+                        Log.d(TAG, "Vosk: $progress")
                     }
                 }
 
-                val ready = localRecognizer?.isReady == true
-                Log.d(TAG, "Local components ready: recognizer=${localRecognizer?.isReady}, tts=${embeddedTtsEngine?.isReady}")
+                Log.d(TAG, "Initializing embedded TTS engine (offline fallback)...")
+                val ttsOk = embeddedTtsEngine?.initialize(currentLanguage) == true
+                if (!ttsOk) {
+                    Log.w(TAG, "Embedded TTS not available (EdgeTts is primary)")
+                }
+
+                val ready = (googleStt?.isReady == true) || (localRecognizer?.isReady == true)
+                val sttEngine = when {
+                    googleStt?.isReady == true -> "GoogleSTT"
+                    localRecognizer?.isReady == true -> "Vosk"
+                    else -> "NONE"
+                }
+                Log.d(TAG, "Local components ready: stt=$sttEngine, tts=EdgeTts")
                 localReady.complete(ready)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize local components", e)
@@ -306,6 +317,7 @@ class ContinuousSpeechOrchestrator(
         sessionTimeoutJob?.cancel()
 
         wakeupManager.stop()
+        googleStt?.cancel()
         audioRecorder?.stopRecording()
         audioPlayer?.stop()
         stopActiveTts()
@@ -347,6 +359,7 @@ class ContinuousSpeechOrchestrator(
         audioPlayer?.stop()
         pcmPlayer?.stop()
         stopActiveTts()
+        googleStt?.cancel()
         behaviorMapper.stopAllBehaviors()
 
         // Transition to listening (within same session)
@@ -479,15 +492,26 @@ class ContinuousSpeechOrchestrator(
         stateMachine.transition(ContinuousState.CAPTURING, "start capturing")
 
         try {
-            val audioData = recordUserSpeech()
-
-            if (audioData == null || audioData.isEmpty()) {
-                handleNoSpeech()
-                return
+            if (config.useLocalProcessing && googleStt?.isReady == true) {
+                // Google STT path: recognizer manages its own mic
+                captureWithGoogleStt()
+            } else if (config.useLocalProcessing) {
+                // Vosk fallback path: record audio, transcribe locally
+                val audioData = recordUserSpeech()
+                if (audioData == null || audioData.isEmpty()) {
+                    handleNoSpeech()
+                    return
+                }
+                captureWithVoskFallback(audioData)
+            } else {
+                // Remote path: record audio, send to server
+                val audioData = recordUserSpeech()
+                if (audioData == null || audioData.isEmpty()) {
+                    handleNoSpeech()
+                    return
+                }
+                processAudioRemotely(audioData)
             }
-
-            // Process the audio
-            processAudio(audioData)
 
         } catch (e: CancellationException) {
             Log.d(TAG, "Capturing cancelled")
@@ -497,6 +521,118 @@ class ContinuousSpeechOrchestrator(
         } finally {
             isRecording.set(false)
         }
+    }
+
+    /**
+     * Capture speech using Google's online SpeechRecognizer.
+     * Pauses voice wakeup to release mic, then resumes after.
+     */
+    private suspend fun captureWithGoogleStt() {
+        val languageCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+
+        // Pause voice wakeup to free the mic for Google STT
+        wakeupManager.pauseVoiceWakeup()
+
+        val transcription = try {
+            googleStt?.listen(languageCode)
+        } catch (e: Exception) {
+            Log.e(TAG, "Google STT error", e)
+            null
+        } finally {
+            // Resume voice wakeup after STT is done
+            wakeupManager.resumeVoiceWakeup()
+        }
+
+        Log.d(TAG, "Google STT transcription: '$transcription'")
+        transcription?.let { listener?.onTranscription(it) }
+
+        if (transcription.isNullOrBlank()) {
+            handleNoSpeech()
+            return
+        }
+
+        // Process the transcribed text locally
+        processTranscriptionLocally(transcription)
+    }
+
+    /**
+     * Vosk fallback: transcribe recorded audio locally, then process the text.
+     */
+    private suspend fun captureWithVoskFallback(audioData: ByteArray) {
+        stateMachine.transition(ContinuousState.THINKING, "processing locally (Vosk)")
+        metrics.tRequestSent = System.currentTimeMillis()
+
+        behaviorMapper.setStateExpression(DialogueState.THINKING)
+        behaviorMapper.setStateLight(DialogueState.THINKING)
+
+        // Wait for Vosk models to finish loading
+        val ready = localReady.await()
+        if (!ready) {
+            Log.e(TAG, "Local components failed to initialize")
+            listener?.onError("Speech recognition models failed to load")
+            handleProcessingError()
+            return
+        }
+
+        val languageCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+
+        val transcription = try {
+            localRecognizer?.transcribe(audioData, languageCode)
+        } catch (e: Exception) {
+            Log.e(TAG, "Vosk transcription error", e)
+            null
+        }
+
+        metrics.tFirstToken = System.currentTimeMillis()
+        Log.d(TAG, "Vosk transcription: '$transcription'")
+        transcription?.let { listener?.onTranscription(it) }
+
+        if (transcription.isNullOrBlank()) {
+            // Vosk returned empty — use fun fallback instead of silently looping
+            handleNoSpeech()
+            return
+        }
+
+        // Got valid text — process through response generator
+        val ttsCode = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
+        val generator = localResponseGenerator ?: run {
+            handleProcessingError()
+            return
+        }
+
+        val localResponse = generator.generateResponse(transcription, languageCode)
+        val response = generator.toLLMResponse(localResponse, transcription, ttsCode)
+
+        Log.d(TAG, "Vosk transcription: '$transcription' → response: '${response.speech.take(60)}'")
+        handleProcessedResponse(response)
+    }
+
+    /**
+     * Process already-transcribed text through the local response generator.
+     */
+    private suspend fun processTranscriptionLocally(transcription: String) {
+        stateMachine.transition(ContinuousState.THINKING, "processing locally")
+        metrics.tRequestSent = System.currentTimeMillis()
+
+        behaviorMapper.setStateExpression(DialogueState.THINKING)
+        behaviorMapper.setStateLight(DialogueState.THINKING)
+
+        val languageCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+        val ttsCode = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
+
+        val generator = localResponseGenerator
+        if (generator == null) {
+            handleProcessingError()
+            return
+        }
+
+        val localResponse = generator.generateResponse(transcription, languageCode)
+        val response = generator.toLLMResponse(localResponse, transcription, ttsCode)
+
+        metrics.tFirstToken = System.currentTimeMillis()
+        Log.d(TAG, "Local transcription: '$transcription' → response: '${response.speech.take(60)}'")
+
+        handleProcessedResponse(response)
     }
 
     private suspend fun recordUserSpeech(): ByteArray? {
@@ -534,57 +670,6 @@ class ContinuousSpeechOrchestrator(
                 null
             }
         }
-    }
-
-    private suspend fun processAudio(audioData: ByteArray) {
-        if (config.useLocalProcessing) {
-            processAudioLocally(audioData)
-        } else {
-            processAudioRemotely(audioData)
-        }
-    }
-
-    private suspend fun processAudioLocally(audioData: ByteArray) {
-        stateMachine.transition(ContinuousState.THINKING, "processing locally")
-        metrics.tRequestSent = System.currentTimeMillis()
-
-        behaviorMapper.setStateExpression(DialogueState.THINKING)
-        behaviorMapper.setStateLight(DialogueState.THINKING)
-
-        // Wait for local components to finish loading (blocks until ready)
-        val ready = localReady.await()
-        if (!ready) {
-            Log.e(TAG, "Local components failed to initialize - cannot process audio")
-            listener?.onError("Speech recognition models failed to load")
-            handleProcessingError()
-            return
-        }
-
-        val languageCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
-        val ttsCode = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
-
-        // Step 1: Transcribe audio locally with Vosk
-        val transcription = try {
-            localRecognizer?.transcribe(audioData, languageCode)
-        } catch (e: Exception) {
-            Log.e(TAG, "Local transcription error", e)
-            null
-        }
-
-        metrics.tFirstToken = System.currentTimeMillis()
-        Log.d(TAG, "Local transcription: '$transcription'")
-
-        // Step 2: Generate response locally
-        val generator = localResponseGenerator
-        if (generator == null) {
-            handleProcessingError()
-            return
-        }
-
-        val localResponse = generator.generateResponse(transcription ?: "", languageCode)
-        val response = generator.toLLMResponse(localResponse, transcription, ttsCode)
-
-        handleProcessedResponse(response)
     }
 
     private suspend fun processAudioRemotely(audioData: ByteArray) {
@@ -658,11 +743,7 @@ class ContinuousSpeechOrchestrator(
         // Skip speaking if response is empty (no valid transcription) and no audio
         if (response.speech.isBlank() && !hasAudio) {
             val emptyCount = consecutiveEmptyResponses.incrementAndGet()
-            Log.d(TAG, "Empty response ($emptyCount/$MAX_CONSECUTIVE_EMPTY) - staying in listening mode")
-
-            // Reset expression to listening (exit thinking state visually)
-            behaviorMapper.setStateExpression(DialogueState.LISTENING)
-            behaviorMapper.setStateLight(DialogueState.LISTENING)
+            Log.d(TAG, "Empty response ($emptyCount/$MAX_CONSECUTIVE_EMPTY)")
 
             // Check if we've had too many empty responses (no one is speaking)
             if (emptyCount >= MAX_CONSECUTIVE_EMPTY) {
@@ -672,10 +753,27 @@ class ContinuousSpeechOrchestrator(
                 return
             }
 
+            // In local mode: speak a fun fallback + do a movement instead of silently looping
+            if (config.useLocalProcessing) {
+                val generator = localResponseGenerator
+                if (generator != null) {
+                    val languageCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+                    val ttsCode = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
+                    val fallback = generator.generateFallbackResponse(languageCode)
+                    val fallbackResponse = generator.toLLMResponse(fallback, response.transcription, ttsCode)
+                    Log.d(TAG, "Fallback response: '${fallback.speech.take(60)}'")
+                    speakResponse(fallbackResponse)
+                    return
+                }
+            }
+
+            // Remote mode: silently loop back to listening
+            behaviorMapper.setStateExpression(DialogueState.LISTENING)
+            behaviorMapper.setStateLight(DialogueState.LISTENING)
             stateMachine.transition(ContinuousState.LISTENING_FOR_FOLLOWUP, "empty response")
             startSilenceMonitor()
             scope.launch {
-                delay(1500) // Wait 1.5 seconds before listening again
+                delay(1500)
                 if (stateMachine.currentState == ContinuousState.LISTENING_FOR_FOLLOWUP) {
                     startCapturing()
                 }
@@ -755,18 +853,38 @@ class ContinuousSpeechOrchestrator(
         val behaviorPlan = behaviorMapper.createBehaviorPlan(response)
 
         if (config.useLocalProcessing) {
-            // LOCAL PATH: Google Translate TTS (online, natural voice)
+            // LOCAL PATH: EdgeTTS (online, natural voice) + synchronized movement
             metrics.tTtsStart = System.currentTimeMillis()
 
-            // Estimate duration for behaviors (rough: ~80ms per character)
-            val estimatedDurationMs = (formattedSpeech.length * 80L).coerceIn(1000L, 30000L)
-            withContext(Dispatchers.Main) {
+            // Synthesize MP3 first so we can play action + speech concurrently
+            val langCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+            val mp3 = try {
+                edgeTts.synthesize(formattedSpeech, langCode)
+            } catch (e: Exception) {
+                Log.e(TAG, "EdgeTTS synthesis failed", e)
+                null
+            }
+            if (mp3 == null || mp3.isEmpty()) {
+                Log.e(TAG, "EdgeTTS returned null/empty for speakResponse")
+                handleTTSError()
+                return
+            }
+
+            // Launch behavior (expression, action, light) concurrently with speech
+            // Action runs in background via scope.launch inside executeBehaviorPlan
+            val estimatedDurationMs = (mp3.size.toLong() * 8 * 1000) / 48000
+            scope.launch(Dispatchers.Main) {
                 behaviorMapper.executeBehaviorPlan(behaviorPlan, estimatedDurationMs) {}
             }
 
-            val ok = speakLocalText(formattedSpeech)
+            // Play MP3 (blocks until complete) — action runs concurrently
+            val ok = playMp3AndWait(mp3)
+
+            // DON'T stop actions here — let them finish naturally (dance, wave, etc.)
+            // Actions only get stopped on barge-in or session stop
+
             if (!ok) {
-                Log.e(TAG, "Google TTS failed for speakResponse")
+                Log.e(TAG, "MP3 playback failed for speakResponse")
                 handleTTSError()
                 return
             }
@@ -994,17 +1112,32 @@ class ContinuousSpeechOrchestrator(
             return
         }
 
-        // Stay silent and continue listening
+        // In local mode: speak a fun fallback + do a movement
+        if (config.useLocalProcessing && sessionActive.get()) {
+            val generator = localResponseGenerator
+            if (generator != null) {
+                val languageCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+                val ttsCode = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
+                val fallback = generator.generateFallbackResponse(languageCode)
+                val response = generator.toLLMResponse(fallback, null, ttsCode)
+                Log.d(TAG, "No-speech fallback: '${fallback.speech.take(60)}'")
+
+                // Transition to THINKING so speakResponse() can go to SPEAKING
+                stateMachine.transition(ContinuousState.THINKING, "no-speech fallback")
+                speakResponse(response)
+                return
+            }
+        }
+
+        // Remote mode: stay silent and continue listening
         if (sessionActive.get()) {
-            // Reset expression to listening
             behaviorMapper.setStateExpression(DialogueState.LISTENING)
             behaviorMapper.setStateLight(DialogueState.LISTENING)
 
             stateMachine.transition(ContinuousState.LISTENING_FOR_FOLLOWUP, "no speech - continue silently")
             startSilenceMonitor()
-            // Restart capturing in separate coroutine with longer delay
             scope.launch {
-                delay(1500) // Wait 1.5 seconds before trying again
+                delay(1500)
                 if (stateMachine.currentState == ContinuousState.LISTENING_FOR_FOLLOWUP) {
                     startCapturing()
                 }
@@ -1364,6 +1497,8 @@ class ContinuousSpeechOrchestrator(
         audioPlayer = null
 
         // Release local components
+        googleStt?.release()
+        googleStt = null
         localRecognizer?.release()
         localRecognizer = null
         embeddedTtsEngine?.release()

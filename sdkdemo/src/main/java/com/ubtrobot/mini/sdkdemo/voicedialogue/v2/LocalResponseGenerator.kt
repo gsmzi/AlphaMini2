@@ -97,6 +97,27 @@ class LocalResponseGenerator {
 
         val GREETINGS_EN = listOf("hello", "hi", "hey", "good morning", "good afternoon", "good evening")
         val GREETINGS_DE = listOf("hallo", "guten tag", "guten morgen", "guten abend", "servus", "gr\u00fc\u00df", "moin")
+
+        // ═══════════════════════════════════════════════════════════════
+        // FALLBACK RESPONSES — fun "didn't hear you" phrases
+        // ═══════════════════════════════════════════════════════════════
+        data class FallbackEntry(val speech: String, val emotion: String, val action: String)
+
+        val FALLBACK_EN = listOf(
+            FallbackEntry("Hmm, I didn't catch that. Could you say it again?", "thinking", "think"),
+            FallbackEntry("Oops, my ears must be ringing! Try again?", "surprised", "wave"),
+            FallbackEntry("Sorry, I was daydreaming! What did you say?", "happy", "hands_up"),
+            FallbackEntry("I think I heard a ghost! Say that again?", "surprised", "clap"),
+            FallbackEntry("My brain just buffered! One more time?", "thinking", "think")
+        )
+
+        val FALLBACK_DE = listOf(
+            FallbackEntry("Hmm, das hab ich nicht verstanden. Kannst du das nochmal sagen?", "thinking", "think"),
+            FallbackEntry("Ups, ich glaube meine Ohren klingeln! Nochmal bitte?", "surprised", "wave"),
+            FallbackEntry("Was hast du gesagt? Ich war kurz abgelenkt!", "happy", "hands_up"),
+            FallbackEntry("Ich glaube ich habe einen Geist geh\u00f6rt! Sag das nochmal?", "surprised", "clap"),
+            FallbackEntry("Mein Gehirn hat kurz gepuffert! Noch einmal bitte?", "thinking", "think")
+        )
     }
 
     data class EmotionData(
@@ -118,6 +139,16 @@ class LocalResponseGenerator {
     fun isStopPhrase(text: String): Boolean {
         val lower = text.lowercase().trim()
         return (STOP_PHRASES_EN + STOP_PHRASES_DE).any { it in lower }
+    }
+
+    /**
+     * Generate a fun fallback response when no speech was detected or input was unrecognized.
+     */
+    fun generateFallbackResponse(language: String = "en"): LocalResponse {
+        val isGerman = language.startsWith("de")
+        val entry = if (isGerman) FALLBACK_DE.random() else FALLBACK_EN.random()
+        Log.d(TAG, "[FALLBACK] '${entry.speech}' action=${entry.action}")
+        return LocalResponse(entry.speech, entry.emotion, entry.action)
     }
 
     fun generateResponse(text: String, language: String = "en"): LocalResponse {
