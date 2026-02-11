@@ -85,6 +85,11 @@ data class ContinuousDialogueConfig(
     val ttsTimeoutMs: Long = 15000,
 
     // ═══════════════════════════════════════════════════════════════
+    // OPENAI (used as LLM fallback when rule-based has no answer)
+    // ═══════════════════════════════════════════════════════════════
+    val openAiApiKey: String = "",
+
+    // ═══════════════════════════════════════════════════════════════
     // LANGUAGE
     // ═══════════════════════════════════════════════════════════════
     val language: DialogueConfig.Language = DialogueConfig.Language.EN
@@ -92,16 +97,16 @@ data class ContinuousDialogueConfig(
     companion object {
         /** Stop phrases that end the conversation (English) */
         val STOP_PHRASES_EN = listOf(
-            "goodbye", "bye", "that's all", "stop", "go to sleep",
+            "goodbye", "bye bye", "that's all", "go to sleep",
             "i'm done", "thank you bye", "end conversation", "quit",
             "that is all", "no more", "nothing else"
         )
 
         /** Stop phrases that end the conversation (German) */
         val STOP_PHRASES_DE = listOf(
-            "tschüss", "auf wiedersehen", "das war's", "stopp",
-            "schlaf", "ich bin fertig", "danke tschüss", "beenden",
-            "ende", "nichts mehr", "das reicht"
+            "tschüss", "tschuss", "auf wiedersehen", "das war's",
+            "ich bin fertig", "danke tschüss", "beenden",
+            "nichts mehr", "das reicht"
         )
 
         /** Follow-up prompts (English) */

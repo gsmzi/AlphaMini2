@@ -106,6 +106,7 @@ class ContinuousSpeechOrchestrator(
     private var localRecognizer: LocalSpeechRecognizer? = null
     private var googleStt: GoogleSpeechRecognizer? = null
     private var localResponseGenerator: LocalResponseGenerator? = null
+    private var openAiClient: OpenAiClient? = null
     private var embeddedTtsEngine: EmbeddedTtsEngine? = null
     private var pcmPlayer: PcmAudioPlayer? = null
     private val localReady = CompletableDeferred<Boolean>() // true when local models loaded
@@ -226,6 +227,14 @@ class ContinuousSpeechOrchestrator(
         localResponseGenerator = LocalResponseGenerator()
         embeddedTtsEngine = EmbeddedTtsEngine(context)
         pcmPlayer = PcmAudioPlayer()
+
+        // Initialize OpenAI LLM fallback (for questions rule-based can't answer)
+        if (config.openAiApiKey.isNotBlank()) {
+            openAiClient = OpenAiClient(config.openAiApiKey)
+            Log.d(TAG, "OpenAI client initialized (GPT fallback enabled)")
+        } else {
+            Log.d(TAG, "No OpenAI API key — GPT fallback disabled")
+        }
 
         // Try Google STT first (online, better accuracy); fall back to Vosk (offline)
         googleStt = GoogleSpeechRecognizer(context).also { it.initialize() }
@@ -409,6 +418,7 @@ class ContinuousSpeechOrchestrator(
         consecutiveEmptyResponses.set(0) // Reset empty response counter
         sessionActive.set(true)
         metrics.reset()
+        openAiClient?.clearHistory()
 
         // Reset audio recorder calibration for new session
         audioRecorder?.resetCalibration()
@@ -593,7 +603,7 @@ class ContinuousSpeechOrchestrator(
             return
         }
 
-        // Got valid text — process through response generator
+        // Got valid text — process through response generator (with OpenAI fallback)
         val ttsCode = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
         val generator = localResponseGenerator ?: run {
             handleProcessingError()
@@ -601,7 +611,8 @@ class ContinuousSpeechOrchestrator(
         }
 
         val localResponse = generator.generateResponse(transcription, languageCode)
-        val response = generator.toLLMResponse(localResponse, transcription, ttsCode)
+        val finalResponse = enhanceWithOpenAi(localResponse, transcription, languageCode, generator)
+        val response = generator.toLLMResponse(finalResponse, transcription, ttsCode)
 
         Log.d(TAG, "Vosk transcription: '$transcription' → response: '${response.speech.take(60)}'")
         handleProcessedResponse(response)
@@ -609,6 +620,7 @@ class ContinuousSpeechOrchestrator(
 
     /**
      * Process already-transcribed text through the local response generator.
+     * If rule-based returns empty, tries OpenAI GPT as fallback.
      */
     private suspend fun processTranscriptionLocally(transcription: String) {
         stateMachine.transition(ContinuousState.THINKING, "processing locally")
@@ -627,12 +639,52 @@ class ContinuousSpeechOrchestrator(
         }
 
         val localResponse = generator.generateResponse(transcription, languageCode)
-        val response = generator.toLLMResponse(localResponse, transcription, ttsCode)
+        val finalResponse = enhanceWithOpenAi(localResponse, transcription, languageCode, generator)
+        val response = generator.toLLMResponse(finalResponse, transcription, ttsCode)
 
         metrics.tFirstToken = System.currentTimeMillis()
         Log.d(TAG, "Local transcription: '$transcription' → response: '${response.speech.take(60)}'")
 
         handleProcessedResponse(response)
+    }
+
+    /**
+     * If rule-based returned empty speech, try OpenAI GPT for a smart answer.
+     * Falls back to fun "I don't know" response if OpenAI also fails.
+     */
+    private suspend fun enhanceWithOpenAi(
+        localResponse: LocalResponseGenerator.LocalResponse,
+        transcription: String,
+        languageCode: String,
+        generator: LocalResponseGenerator
+    ): LocalResponseGenerator.LocalResponse {
+        // Rule-based had an answer — use it
+        if (localResponse.speech.isNotBlank()) return localResponse
+
+        // Try OpenAI GPT
+        val ai = openAiClient
+        if (ai != null) {
+            Log.d(TAG, "Rule-based empty — trying OpenAI for: '$transcription'")
+            val aiText = try {
+                ai.chat(transcription, languageCode)
+            } catch (e: Exception) {
+                Log.e(TAG, "OpenAI request failed", e)
+                null
+            }
+
+            if (!aiText.isNullOrBlank()) {
+                Log.d(TAG, "OpenAI response: '${aiText.take(80)}'")
+                return LocalResponseGenerator.LocalResponse(
+                    speech = aiText,
+                    emotion = "happy",
+                    action = "nod"
+                )
+            }
+            Log.w(TAG, "OpenAI returned null/blank — falling back to fun response")
+        }
+
+        // Ultimate fallback: fun "I don't know" response
+        return generator.generateUnrecognizedResponse(languageCode)
     }
 
     private suspend fun recordUserSpeech(): ByteArray? {
@@ -1330,7 +1382,9 @@ class ContinuousSpeechOrchestrator(
     private fun isStopPhrase(text: String): Boolean {
         val lowerText = text.lowercase().trim()
         return config.getStopPhrases(currentLanguage).any { phrase ->
-            lowerText.contains(phrase.lowercase())
+            val p = phrase.lowercase()
+            lowerText == p || lowerText.startsWith("$p ") ||
+                lowerText.endsWith(" $p") || " $p " in lowerText
         }
     }
 
@@ -1506,6 +1560,7 @@ class ContinuousSpeechOrchestrator(
         pcmPlayer?.release()
         pcmPlayer = null
         localResponseGenerator = null
+        openAiClient = null
 
         behaviorMapper.release()
         wakeupManager.release()

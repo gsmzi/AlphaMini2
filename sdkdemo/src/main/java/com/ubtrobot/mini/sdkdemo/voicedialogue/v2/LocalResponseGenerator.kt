@@ -45,58 +45,54 @@ class LocalResponseGenerator {
         // STOP PHRASES
         // ═══════════════════════════════════════════════════════════════
         val STOP_PHRASES_EN = listOf(
-            "goodbye", "bye", "that's all", "thats all", "stop", "go to sleep",
+            "goodbye", "bye bye", "that's all", "thats all", "go to sleep",
             "i'm done", "im done", "thank you bye", "end conversation", "quit",
-            "that is all", "no more", "nothing else", "i'm finished", "enough"
+            "that is all", "no more", "nothing else", "i'm finished"
         )
 
         val STOP_PHRASES_DE = listOf(
-            "tsch\u00fcss", "tschuss", "s\u00fcss", "s\u00fc\u00df", "tschuess",
-            "auf wiedersehen", "wiedersehen", "das war's", "das wars", "stopp",
-            "schlaf", "ich bin fertig", "danke tsch\u00fcss", "beenden",
-            "ende", "nichts mehr", "das reicht", "genug", "fertig",
-            "ciao", "bye", "tschau", "servus"
+            "tsch\u00fcss", "tschuss", "tschuess",
+            "auf wiedersehen", "wiedersehen", "das war's", "das wars",
+            "ich bin fertig", "danke tsch\u00fcss", "beenden",
+            "nichts mehr", "das reicht",
+            "ciao", "bye bye", "tschau"
         )
 
         // ═══════════════════════════════════════════════════════════════
-        // FUZZY WORD LISTS — copied exactly from server.py
+        // ACTION WORD LISTS — tight matching only (OpenAI handles the rest)
         // ═══════════════════════════════════════════════════════════════
         val DANCE_WORDS = listOf(
-            "dance", "dances", "dancing", "dans", "danc", "tanz", "tanzen", "tanzt", "dancer", "danced",
-            "thus", "then", "stance", "chance", "dense", "tense", "dent", "danz", "dunce",
-            "can you dance", "let's dance", "do a dance", "show me a dance", "tai chi",
-            "tents", "tens", "den", "tan", "hands", "pants", "ants", "lance", "glance",
-            "france", "advance", "enhance", "romance", "prance", "dance for me"
+            "dance", "dances", "dancing", "danced", "dancer",
+            "tanz", "tanzen", "tanzt", "tai chi",
+            "can you dance", "let's dance", "do a dance", "show me a dance", "dance for me"
         )
 
         val WAVE_WORDS = listOf(
-            "wave", "waves", "waving", "weve", "we've", "weave", "waive", "wav", "waved",
-            "wink", "winke", "winken", "winkt", "wait", "wade", "away", "rave", "gave",
-            "save", "brave", "grave", "cave", "pave", "shave", "wave at me", "say hi",
-            "wave hello", "wave your hand", "way", "weighs", "ways", "wake", "make"
+            "wave", "waves", "waving", "waved",
+            "winke", "winken", "winkt",
+            "wave at me", "wave hello", "wave your hand"
         )
 
         val HANDS_UP_WORDS = listOf(
             "hands up", "hand up", "hands-up", "handsup", "raise hands", "raise your hands",
-            "put your hands up", "arms up", "ends up", "hands app", "hans up", "and up",
-            "h\u00e4nde hoch", "hande hoch", "arme hoch", "haende hoch", "ende hoch",
-            "hands", "hand", "raise", "up up", "reach up", "hands in the air",
-            "put them up", "stick em up", "reach for the sky", "high five",
-            "ans up", "ands up", "and zap", "hands out", "hands op"
+            "put your hands up", "arms up",
+            "h\u00e4nde hoch", "hande hoch", "arme hoch", "haende hoch",
+            "hands in the air", "put them up", "stick em up"
         )
 
         val CLAP_WORDS = listOf(
-            "clap", "claps", "clapping", "klap", "klatsch", "klatschen", "applaud", "applause", "clapped",
-            "clap your hands", "give me a clap", "cap", "crap", "flap", "slap", "lap", "map", "tap"
+            "clap", "claps", "clapping", "clapped",
+            "klatsch", "klatschen", "applaud", "applause",
+            "clap your hands", "give me a clap"
         )
 
         val BOW_WORDS = listOf(
-            "bow", "bows", "bowing", "verbeugen", "verbeug", "verbeugung", "bowed",
-            "take a bow", "show respect", "how", "now", "wow", "vow", "cow", "row"
+            "bow", "bows", "bowing", "bowed",
+            "verbeugen", "verbeug", "verbeugung",
+            "take a bow"
         )
 
-        val GREETINGS_EN = listOf("hello", "hi", "hey", "good morning", "good afternoon", "good evening")
-        val GREETINGS_DE = listOf("hallo", "guten tag", "guten morgen", "guten abend", "servus", "gr\u00fc\u00df", "moin")
+        // Greetings, jokes, help, thanks etc. are all handled by OpenAI now
 
         // ═══════════════════════════════════════════════════════════════
         // FALLBACK RESPONSES — fun "didn't hear you" phrases
@@ -137,8 +133,12 @@ class LocalResponseGenerator {
     )
 
     fun isStopPhrase(text: String): Boolean {
-        val lower = text.lowercase().trim()
-        return (STOP_PHRASES_EN + STOP_PHRASES_DE).any { it in lower }
+        val words = text.lowercase().trim()
+        return (STOP_PHRASES_EN + STOP_PHRASES_DE).any { phrase ->
+            // Match as whole words/phrase, not substring
+            words == phrase || words.startsWith("$phrase ") ||
+                words.endsWith(" $phrase") || " $phrase " in words
+        }
     }
 
     /**
@@ -149,6 +149,21 @@ class LocalResponseGenerator {
         val entry = if (isGerman) FALLBACK_DE.random() else FALLBACK_EN.random()
         Log.d(TAG, "[FALLBACK] '${entry.speech}' action=${entry.action}")
         return LocalResponse(entry.speech, entry.emotion, entry.action)
+    }
+
+    /**
+     * Word-boundary match: checks if phrase appears as whole word(s) in text.
+     */
+    private fun containsPhrase(text: String, phrase: String): Boolean {
+        return text == phrase || text.startsWith("$phrase ") ||
+            text.endsWith(" $phrase") || " $phrase " in text
+    }
+
+    /**
+     * Check if ANY word/phrase from the list matches as whole words in text.
+     */
+    private fun matchesAny(text: String, words: List<String>): Boolean {
+        return words.any { containsPhrase(text, it) }
     }
 
     fun generateResponse(text: String, language: String = "en"): LocalResponse {
@@ -168,11 +183,11 @@ class LocalResponseGenerator {
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // ACTION COMMANDS — check first with fuzzy matching
+        // ACTION COMMANDS — word-boundary matching (tight, no false positives)
         // ═══════════════════════════════════════════════════════════════
 
         // Dance
-        if (DANCE_WORDS.any { it in lower }) {
+        if (matchesAny(lower, DANCE_WORDS)) {
             Log.d(TAG, "[ACTION] Dance detected in: '$lower'")
             val responses = if (isGerman) listOf("Yeehaw! Tanzzeit!", "Lass uns grooven!", "Schau mir zu!")
                             else listOf("Woohoo! Dance time!", "Let's groove!", "Watch me move!")
@@ -180,7 +195,7 @@ class LocalResponseGenerator {
         }
 
         // Wave
-        if (WAVE_WORDS.any { it in lower }) {
+        if (matchesAny(lower, WAVE_WORDS)) {
             Log.d(TAG, "[ACTION] Wave detected in: '$lower'")
             val responses = if (isGerman) listOf("Hey hey hey!", "Hallo Freund!", "Gr\u00fc\u00df dich!")
                             else listOf("Hey there, friend!", "Hi hi hi!", "Hello hello!")
@@ -188,7 +203,7 @@ class LocalResponseGenerator {
         }
 
         // Hands up
-        if (HANDS_UP_WORDS.any { it in lower }) {
+        if (matchesAny(lower, HANDS_UP_WORDS)) {
             Log.d(TAG, "[ACTION] Hands up detected in: '$lower'")
             val responses = if (isGerman)
                 listOf("H\u00e4nde hoch, nicht schie\u00dfen!", "Juhu! H\u00e4nde hoch!", "Yeah! So macht man das!")
@@ -197,7 +212,7 @@ class LocalResponseGenerator {
         }
 
         // Clap
-        if (CLAP_WORDS.any { it in lower }) {
+        if (matchesAny(lower, CLAP_WORDS)) {
             Log.d(TAG, "[ACTION] Clap detected in: '$lower'")
             val responses = if (isGerman) listOf("Bravo! Bravo!", "Applaus!")
                             else listOf("Awesome! Clap clap!", "Give it up!")
@@ -205,7 +220,7 @@ class LocalResponseGenerator {
         }
 
         // Bow
-        if (BOW_WORDS.any { it in lower }) {
+        if (matchesAny(lower, BOW_WORDS)) {
             Log.d(TAG, "[ACTION] Bow detected in: '$lower'")
             val responses = if (isGerman) listOf("Zu Ihren Diensten!", "Es ist mir eine Ehre!")
                             else listOf("At your service!", "The pleasure is mine!")
@@ -213,76 +228,68 @@ class LocalResponseGenerator {
         }
 
         // ═══════════════════════════════════════════════════════════════
-        // INFORMATION QUERIES
+        // INFORMATION QUERIES — only exact phrase matches
         // ═══════════════════════════════════════════════════════════════
 
-        // Time
-        if ("time" in lower || "uhr" in lower || "zeit" in lower || "sp\u00e4t" in lower) {
+        // Time — use multi-word phrases to avoid false positives
+        if ("what time" in lower || "the time" in lower || "wie sp\u00e4t" in lower ||
+            "wie viel uhr" in lower || "wieviel uhr" in lower || containsPhrase(lower, "uhrzeit")) {
             val t = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
             val speech = if (isGerman) "Es ist $t Uhr." else "It's $t."
             return LocalResponse(speech, "neutral", "nod")
         }
 
-        // Date
-        if ("date" in lower || "day" in lower || "heute" in lower || "datum" in lower) {
-            val d = SimpleDateFormat("EEEE, MMMM dd", Locale.getDefault()).format(Date())
-            val speech = if (isGerman) "Heute ist $d." else "Today is $d."
-            return LocalResponse(speech, "neutral", "nod")
-        }
-
         // ═══════════════════════════════════════════════════════════════
-        // CONVERSATION — Fun and engaging responses
+        // CONVERSATION — only very specific phrase matches
+        // Everything else goes to OpenAI for a smart answer
         // ═══════════════════════════════════════════════════════════════
 
-        // How are you
+        // How are you (exact phrases only)
         if ("how are you" in lower || "wie geht" in lower || "how do you feel" in lower) {
             val responses = if (isGerman) listOf("Mir geht's fantastisch!", "Super duper! Willst du tanzen?", "Ich f\u00fchl mich toll!")
                             else listOf("I'm fantastic! Ready to party!", "Super duper! Wanna dance?", "Feeling awesome today!")
             return LocalResponse(responses.random(), "excited", "wave")
         }
 
-        // Name
-        if ("name" in lower || "wer bist" in lower || "hei\u00dft" in lower || "heisst" in lower || "who are you" in lower) {
+        // Who are you / your name (exact phrases only)
+        if ("your name" in lower || "what's your name" in lower || "who are you" in lower ||
+            "wer bist du" in lower || "wie hei\u00dft du" in lower || "wie heisst du" in lower) {
             val responses = if (isGerman) listOf("Ich bin Alpha Mini, dein Roboter-Kumpel!", "Nenn mich Alpha Mini!", "Alpha Mini zu deinen Diensten!")
                             else listOf("I'm Alpha Mini, your robot buddy!", "Call me Alpha Mini! Nice to meet you!", "Alpha Mini at your service!")
             return LocalResponse(responses.random(), "happy", "wave")
         }
 
-        // Thanks
-        if ("thank" in lower || "danke" in lower) {
-            val responses = if (isGerman) listOf("Du bist toll!", "Immer gerne!", "Freut mich zu helfen!")
-                            else listOf("You're awesome!", "Anytime, friend!", "Happy to help!")
-            return LocalResponse(responses.random(), "happy", "bow")
-        }
-
-        // Help
-        if ("help" in lower || "hilfe" in lower || "can you" in lower || "kannst" in lower || "what can you" in lower) {
-            val responses = if (isGerman) listOf("Ich kann tanzen, winken, H\u00e4nde hoch und klatschen!", "Sag Tanz, Winke oder H\u00e4nde hoch!")
-                            else listOf("I can dance, wave, raise my hands, and clap! Try me!", "Say dance, wave, or hands up! I'm ready!")
-            return LocalResponse(responses.random(), "excited", "wave")
-        }
-
-        // Joke
-        if ("joke" in lower || "witz" in lower || "funny" in lower || "lustig" in lower) {
-            val jokes = if (isGerman)
-                listOf("Warum macht der Roboter Urlaub? Batterien laden!", "Ich erz\u00e4hlte meiner CPU einen Witz. Hat nicht gerechnet!", "Roboter werden nicht m\u00fcde. Nur ein kurzer Byte!")
-            else
-                listOf("Why did the robot go on vacation? To recharge its batteries!", "I told a joke to my CPU. It didn't compute!", "Robots don't get tired. We just need a quick byte!")
-            return LocalResponse(jokes.random(), "excited", "clap")
-        }
-
-        // Greetings
-        if ((GREETINGS_EN + GREETINGS_DE).any { it in lower }) {
-            val responses = if (isGerman) listOf("Hey! Was geht?", "Hallo Freund! Bereit f\u00fcr Spa\u00df?", "Hi hi hi! Sch\u00f6n dich zu sehen!")
-                            else listOf("Hey there! What's up?", "Hello friend! Ready to have fun?", "Hi hi hi! Nice to see you!")
-            return LocalResponse(responses.random(), "excited", "wave")
-        }
-
         // ═══════════════════════════════════════════════════════════════
-        // DEFAULT — Stay silent for unrecognized input
+        // DEFAULT — return empty so orchestrator can try OpenAI LLM
         // ═══════════════════════════════════════════════════════════════
-        Log.d(TAG, "[UNRECOGNIZED] '$lower' - staying silent")
+        Log.d(TAG, "[UNRECOGNIZED] '$lower' - no rule matched, returning empty for LLM fallback")
         return LocalResponse("", "neutral", "idle")
+    }
+
+    /**
+     * Generate a fun "I don't know" response as ultimate fallback
+     * (used when both rule-based AND OpenAI fail).
+     */
+    fun generateUnrecognizedResponse(language: String = "en"): LocalResponse {
+        val isGerman = language.startsWith("de")
+        val responses = if (isGerman)
+            listOf(
+                "Hmm, das wei\u00df ich leider nicht. Aber ich kann tanzen! Sag einfach Tanz!",
+                "Gute Frage! Ich bin nur ein kleiner Roboter. Frag mich lieber nach der Uhrzeit!",
+                "Das \u00fcbersteigt meine Roboter-Gehirnkapazit\u00e4t! Aber ich kann winken!",
+                "Keine Ahnung, aber willst du mich tanzen sehen?",
+                "Das ist eine schwierige Frage f\u00fcr einen Roboter. Sag Witz f\u00fcr einen Roboter-Witz!"
+            )
+        else
+            listOf(
+                "Hmm, I don't know that one. But I can dance! Just say dance!",
+                "Good question! I'm just a little robot. Ask me what time it is!",
+                "That's beyond my robot brain! But I can wave at you!",
+                "No idea, but wanna see me dance?",
+                "Tough question for a robot. Say joke for a robot joke!"
+            )
+        Log.d(TAG, "[UNRECOGNIZED FALLBACK] '${responses.first().take(40)}'")
+        return LocalResponse(responses.random(), "thinking", "think")
     }
 
     /**
