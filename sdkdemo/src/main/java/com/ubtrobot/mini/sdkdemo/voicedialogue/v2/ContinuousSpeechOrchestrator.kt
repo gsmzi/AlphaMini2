@@ -673,7 +673,7 @@ class ContinuousSpeechOrchestrator(
         }
 
         // Conversational action IDs to rotate through (wave, nod, clap)
-        val conversationalActions = listOf("010", "011", "018")
+        val conversationalActions = listOf("010", "011", "019")
         var firstSentenceSpoken = false
         var streamError: Exception? = null
 

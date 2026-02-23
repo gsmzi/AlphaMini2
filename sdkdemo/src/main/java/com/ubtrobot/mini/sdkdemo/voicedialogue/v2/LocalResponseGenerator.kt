@@ -33,7 +33,7 @@ class LocalResponseGenerator {
             "dance" to "014",
             "wave" to "010",
             "hands_up" to "017",
-            "clap" to "018",
+            "clap" to "019",
             "bow" to "016",
             "nod" to "011",
             "think" to "021",
