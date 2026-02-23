@@ -167,7 +167,11 @@ class LocalResponseGenerator {
     }
 
     fun generateResponse(text: String, language: String = "en"): LocalResponse {
+        // Strip punctuation so "Hands up!" and "Tanz!" match the same as "hands up" / "tanz"
         val lower = text.lowercase().trim()
+            .replace(Regex("[!?.,;:…\"'()]"), " ")
+            .replace(Regex("\\s+"), " ")
+            .trim()
         val isGerman = language.startsWith("de")
 
         // Check stop phrases

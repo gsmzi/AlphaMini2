@@ -3,9 +3,11 @@
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.net.ConnectivityManager
 import android.util.Log
 import com.ubtrobot.mini.sdkdemo.BuildConfig
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.ByteArrayOutputStream
@@ -105,6 +107,7 @@ class ContinuousSpeechOrchestrator(
     // Local on-device components (used when useLocalProcessing = true)
     private var localRecognizer: LocalSpeechRecognizer? = null
     private var googleStt: GoogleSpeechRecognizer? = null
+    private var whisperClient: WhisperSttClient? = null
     private var localResponseGenerator: LocalResponseGenerator? = null
     private var openAiClient: OpenAiClient? = null
     private var embeddedTtsEngine: EmbeddedTtsEngine? = null
@@ -165,7 +168,7 @@ class ContinuousSpeechOrchestrator(
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     fun initialize() {
-        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} STT=GoogleSTT TTS=EdgeTts")
+        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} STT=Whisper+Vosk TTS=EdgeTts")
 
         // Initialize reusable audio components
         initializeAudioComponents()
@@ -228,38 +231,32 @@ class ContinuousSpeechOrchestrator(
         embeddedTtsEngine = EmbeddedTtsEngine(context)
         pcmPlayer = PcmAudioPlayer()
 
-        // Initialize OpenAI LLM fallback (for questions rule-based can't answer)
+        // Initialize OpenAI client (Whisper STT + GPT streaming responses)
         if (config.openAiApiKey.isNotBlank()) {
             openAiClient = OpenAiClient(config.openAiApiKey)
-            Log.d(TAG, "OpenAI client initialized (GPT fallback enabled)")
+            if (config.useWhisper) {
+                whisperClient = WhisperSttClient(config.openAiApiKey)
+                Log.d(TAG, "WhisperSttClient initialized (primary STT)")
+            }
+            Log.d(TAG, "OpenAI client initialized")
         } else {
-            Log.d(TAG, "No OpenAI API key — GPT fallback disabled")
+            Log.d(TAG, "No OpenAI API key — Whisper + GPT disabled, using Vosk only")
         }
 
-        // Try Google STT first (online, better accuracy); fall back to Vosk (offline)
-        googleStt = GoogleSpeechRecognizer(context).also { it.initialize() }
-
-        if (googleStt?.isReady == true) {
-            Log.d(TAG, "Using Google STT (online)")
-        } else {
-            Log.w(TAG, "Google STT not available — falling back to Vosk (offline)")
-            localRecognizer = LocalSpeechRecognizer(context)
-        }
+        // Always create Vosk — it's the offline fallback for Whisper
+        localRecognizer = LocalSpeechRecognizer(context)
 
         scope.launch(Dispatchers.IO) {
             try {
-                // Load Vosk models if Google STT is not available
-                if (localRecognizer != null) {
-                    withContext(Dispatchers.Main) {
-                        listener?.onStateChanged(ContinuousState.IDLE)
-                    }
-                    Log.d(TAG, "Loading Vosk speech recognition models...")
-                    localRecognizer?.initialize(
-                        loadEnglish = true,
-                        loadGerman = true
-                    ) { progress ->
-                        Log.d(TAG, "Vosk: $progress")
-                    }
+                withContext(Dispatchers.Main) {
+                    listener?.onStateChanged(ContinuousState.IDLE)
+                }
+                Log.d(TAG, "Loading Vosk speech recognition models (EN+DE)...")
+                localRecognizer?.initialize(
+                    loadEnglish = true,
+                    loadGerman = true
+                ) { progress ->
+                    Log.d(TAG, "Vosk: $progress")
                 }
 
                 Log.d(TAG, "Initializing embedded TTS engine (offline fallback)...")
@@ -268,13 +265,9 @@ class ContinuousSpeechOrchestrator(
                     Log.w(TAG, "Embedded TTS not available (EdgeTts is primary)")
                 }
 
-                val ready = (googleStt?.isReady == true) || (localRecognizer?.isReady == true)
-                val sttEngine = when {
-                    googleStt?.isReady == true -> "GoogleSTT"
-                    localRecognizer?.isReady == true -> "Vosk"
-                    else -> "NONE"
-                }
-                Log.d(TAG, "Local components ready: stt=$sttEngine, tts=EdgeTts")
+                val ready = localRecognizer?.isReady == true
+                val sttLabel = if (whisperClient != null) "Whisper+Vosk" else "Vosk"
+                Log.d(TAG, "Local components ready: stt=$sttLabel, tts=EdgeTts, voskReady=$ready")
                 localReady.complete(ready)
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to initialize local components", e)
@@ -416,6 +409,7 @@ class ContinuousSpeechOrchestrator(
         currentSession = ConversationSessionManager.getOrCreateSession(config.language)
         turnCounter.set(0)
         consecutiveEmptyResponses.set(0) // Reset empty response counter
+        lastLLMResponse = null            // Clear any stale response from a previous session
         sessionActive.set(true)
         metrics.reset()
         openAiClient?.clearHistory()
@@ -502,17 +496,18 @@ class ContinuousSpeechOrchestrator(
         stateMachine.transition(ContinuousState.CAPTURING, "start capturing")
 
         try {
-            if (config.useLocalProcessing && googleStt?.isReady == true) {
-                // Google STT path: recognizer manages its own mic
-                captureWithGoogleStt()
-            } else if (config.useLocalProcessing) {
-                // Vosk fallback path: record audio, transcribe locally
+            if (config.useLocalProcessing) {
+                // Record audio once, then route to Whisper (online) or Vosk (offline fallback)
                 val audioData = recordUserSpeech()
                 if (audioData == null || audioData.isEmpty()) {
                     handleNoSpeech()
                     return
                 }
-                captureWithVoskFallback(audioData)
+                if (whisperClient != null && isNetworkAvailable()) {
+                    captureWithWhisper(audioData)      // Whisper primary
+                } else {
+                    captureWithVoskFallback(audioData) // Vosk offline fallback
+                }
             } else {
                 // Remote path: record audio, send to server
                 val audioData = recordUserSpeech()
@@ -616,6 +611,216 @@ class ContinuousSpeechOrchestrator(
 
         Log.d(TAG, "Vosk transcription: '$transcription' → response: '${response.speech.take(60)}'")
         handleProcessedResponse(response)
+    }
+
+    /**
+     * Whisper path: POST recorded audio to OpenAI Whisper for transcription,
+     * then process via streaming GPT. Falls back to Vosk if Whisper fails.
+     */
+    private suspend fun captureWithWhisper(audioData: ByteArray) {
+        val langCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+
+        val transcription = try {
+            whisperClient?.transcribe(audioData, config.sampleRate, langCode)
+        } catch (e: Exception) {
+            Log.e(TAG, "Whisper transcription error", e)
+            null
+        }
+
+        if (transcription.isNullOrBlank()) {
+            Log.w(TAG, "Whisper returned null/blank — falling back to Vosk")
+            captureWithVoskFallback(audioData)
+            return
+        }
+
+        Log.d(TAG, "Whisper transcription: '$transcription'")
+        listener?.onTranscription(transcription)
+        processTranscriptionWithOpenAi(transcription)
+    }
+
+    /**
+     * Process transcribed text through the streaming OpenAI pipeline.
+     * Action words and stop phrases are handled locally (no network needed).
+     * All other conversational input goes to GPT with SSE streaming so the
+     * first sentence is spoken ~1-2s before the full response arrives.
+     */
+    private suspend fun processTranscriptionWithOpenAi(transcription: String) {
+        stateMachine.transition(ContinuousState.THINKING, "processing with OpenAI")
+        behaviorMapper.setStateExpression(DialogueState.THINKING)
+        behaviorMapper.setStateLight(DialogueState.THINKING)
+
+        val langCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+        val ttsCode  = if (currentLanguage == DialogueConfig.Language.DE) "de-DE" else "en-US"
+        val generator = localResponseGenerator ?: run { handleProcessingError(); return }
+
+        // Check for language switch ("switch" / "wechseln") before anything else
+        if (handleLanguageSwitch(transcription)) return
+
+        // 1. Check action words + stop phrases locally (instant, no network needed)
+        val localResponse = generator.generateResponse(transcription, langCode)
+        if (localResponse.speech.isNotBlank()) {
+            // Action command (dance, wave, clap, etc.) or stop phrase — no GPT needed
+            handleProcessedResponse(generator.toLLMResponse(localResponse, transcription, ttsCode))
+            return
+        }
+
+        // 2. Conversational input — use OpenAI streaming
+        val ai = openAiClient ?: run {
+            // No API key — give a rule-based fallback response
+            handleProcessedResponse(generator.toLLMResponse(
+                generator.generateUnrecognizedResponse(langCode), transcription, ttsCode))
+            return
+        }
+
+        // Conversational action IDs to rotate through (wave, nod, clap)
+        val conversationalActions = listOf("010", "011", "018")
+        var firstSentenceSpoken = false
+        var streamError: Exception? = null
+
+        // Producer-consumer pattern: each detected sentence is paired with an already-started
+        // synthesis Deferred so EdgeTTS runs in parallel with the ongoing LLM stream and
+        // previous chunk playback — eliminating the ~700ms per-chunk synthesis gap.
+        data class SynthItem(val text: String, val mp3: Deferred<ByteArray?>)
+        val synthChannel = Channel<SynthItem>(capacity = 2)
+        val sentenceBuf = StringBuilder()
+
+        try {
+            coroutineScope {
+                // Producer: stream LLM tokens → detect sentence boundaries → start TTS immediately
+                launch(Dispatchers.IO) {
+                    try {
+                        ai.chatStream(transcription, langCode).collect { token ->
+                            sentenceBuf.append(token)
+                            val text = sentenceBuf.toString()
+                            val idx = text.indexOfLast { it == '.' || it == '!' || it == '?' }
+                            if (idx >= 0 && text.length > idx + 1) {
+                                val sentence = text.substring(0, idx + 1).trim()
+                                sentenceBuf.delete(0, idx + 1)
+                                if (sentence.isNotBlank()) {
+                                    // Kick off TTS synthesis now — runs while stream/playback continues
+                                    val mp3Job = async(Dispatchers.IO) { synthesizeChunk(sentence, langCode) }
+                                    synthChannel.send(SynthItem(sentence, mp3Job))
+                                }
+                            }
+                        }
+                        // Flush any remaining text (response ends without trailing punctuation)
+                        val rem = sentenceBuf.toString().trim()
+                        if (rem.isNotBlank()) {
+                            val mp3Job = async(Dispatchers.IO) { synthesizeChunk(rem, langCode) }
+                            synthChannel.send(SynthItem(rem, mp3Job))
+                        }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.e(TAG, "OpenAI stream error", e)
+                        streamError = e
+                    } finally {
+                        synthChannel.close()
+                    }
+                }
+
+                // Consumer: await pre-fetched MP3 (synthesis already in progress), then play
+                for (item in synthChannel) {
+                    val mp3 = item.mp3.await()
+                    if (mp3 != null && mp3.isNotEmpty()) {
+                        if (!firstSentenceSpoken) {
+                            firstSentenceSpoken = true
+                            stateMachine.transition(ContinuousState.SPEAKING, "first sentence ready")
+                            val plan = BehaviorPlan(
+                                expression = "emo_007",
+                                action = conversationalActions.random(),
+                                light = BehaviorPlan.LightConfig(mode = "green", color = 0x00FF00),
+                                preRollMs = 0L,
+                                postRollMs = 300L
+                            )
+                            scope.launch(Dispatchers.Main) {
+                                behaviorMapper.executeBehaviorPlan(plan, 5000L) {}
+                            }
+                        }
+                        playMp3AndWait(mp3)
+                    } else {
+                        Log.w(TAG, "Skipping empty TTS chunk: '${item.text.take(40)}'")
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Streaming pipeline error", e)
+            if (!firstSentenceSpoken) {
+                handleProcessedResponse(generator.toLLMResponse(
+                    generator.generateUnrecognizedResponse(langCode), transcription, ttsCode))
+                return
+            }
+        }
+
+        if (!firstSentenceSpoken) {
+            // Stream produced no spoken sentences — give a fallback response
+            handleProcessedResponse(generator.toLLMResponse(
+                generator.generateUnrecognizedResponse(langCode), transcription, ttsCode))
+            return
+        }
+
+        afterSpeaking()
+    }
+
+    /**
+     * Synthesize a single sentence to MP3 bytes. Safe to call from any dispatcher.
+     * Returns null on failure.
+     */
+    private suspend fun synthesizeChunk(text: String, langCode: String): ByteArray? {
+        return try {
+            edgeTts.synthesize(text, langCode)
+        } catch (e: Exception) {
+            Log.e(TAG, "EdgeTTS synthesis failed for: '${text.take(40)}'", e)
+            null
+        }
+    }
+
+    /**
+     * Synthesize and play a single sentence chunk during streaming.
+     * Does not touch the state machine — caller manages state transitions.
+     */
+    private suspend fun speakChunk(text: String) {
+        val langCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+        val mp3 = synthesizeChunk(text, langCode)
+        if (mp3 == null || mp3.isEmpty()) {
+            Log.e(TAG, "EdgeTTS returned empty for chunk: '${text.take(40)}'")
+            return
+        }
+        playMp3AndWait(mp3)
+    }
+
+    /**
+     * Called after all streaming chunks have been spoken.
+     * Mirrors the tail of handleSpeakingComplete() without checking lastLLMResponse.
+     */
+    private fun afterSpeaking() {
+        if (!sessionActive.get()) return
+        if (stateMachine.currentState != ContinuousState.SPEAKING) return
+
+        metrics.tAudioEnd = System.currentTimeMillis()
+        metrics.log(TAG)
+        listener?.onMetrics(metrics.copy())
+
+        stateMachine.transition(ContinuousState.LISTENING_FOR_FOLLOWUP, "streaming complete")
+        startSilenceMonitor()
+        currentSession?.touch()
+
+        scope.launch {
+            delay(500L)
+            if (stateMachine.currentState == ContinuousState.LISTENING_FOR_FOLLOWUP) {
+                startCapturing()
+            }
+        }
+    }
+
+    /**
+     * Returns true when a network interface is connected.
+     * Used to decide Whisper vs Vosk fallback.
+     */
+    @Suppress("DEPRECATION")
+    private fun isNetworkAvailable(): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        return cm.activeNetworkInfo?.isConnected == true
     }
 
     /**
@@ -1555,6 +1760,7 @@ class ContinuousSpeechOrchestrator(
         googleStt = null
         localRecognizer?.release()
         localRecognizer = null
+        whisperClient = null
         embeddedTtsEngine?.release()
         embeddedTtsEngine = null
         pcmPlayer?.release()

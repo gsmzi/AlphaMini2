@@ -26,17 +26,24 @@ class VoiceDialogueService : Service() {
         private const val CHANNEL_ID = "voice_dialogue_service"
         private const val CHANNEL_ID_BOOT = "voice_dialogue_boot"
         private const val NOTIF_ID = 1001
-        private const val PREFS_NAME = "voice_dialogue_prefs"
-        private const val KEY_LAST_BOOT_MS = "last_boot_ms"
         private const val TAG = "VoiceDialogueService"
-        private const val INITIAL_LAUNCH_DELAY_MS = 15_000L
-        private const val LAUNCH_RETRY_DELAY_MS = 8_000L
-        private const val MAX_LAUNCH_RETRIES = 5
+        private const val INITIAL_LAUNCH_DELAY_MS = 8_000L   // wait for system to settle after boot
+        private const val WATCHDOG_INTERVAL_MS      = 8_000L   // re-check every 8 s while service runs
         private const val FULLSCREEN_NOTIF_ID = 1002
     }
 
     private val handler = Handler(Looper.getMainLooper())
-    private var launchRetryCount = 0
+
+    /** Perpetual watchdog — relaunches the activity whenever it is not alive. */
+    private val watchdog = object : Runnable {
+        override fun run() {
+            if (!VoiceDialogueActivityV3.isAlive) {
+                Log.w(TAG, "Watchdog: Activity not alive — relaunching")
+                launchDialogueActivity()
+            }
+            handler.postDelayed(this, WATCHDOG_INTERVAL_MS)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -48,17 +55,17 @@ class VoiceDialogueService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "Service start command received")
-        val bootTimeMs = intent?.getLongExtra("boot_time_ms", -1L) ?: -1L
-        if (bootTimeMs > 0) {
-            val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val lastBoot = prefs.getLong(KEY_LAST_BOOT_MS, -1L)
-            if (bootTimeMs != lastBoot) {
-                prefs.edit().putLong(KEY_LAST_BOOT_MS, bootTimeMs).apply()
-                Log.d(TAG, "New boot detected — will launch VoiceDialogueActivityV3 in ${INITIAL_LAUNCH_DELAY_MS}ms")
-                launchRetryCount = 0
-                handler.postDelayed({ launchDialogueActivity() }, INITIAL_LAUNCH_DELAY_MS)
-            }
+
+        // First launch: wait for the system to settle after boot, then let the watchdog take over
+        if (!VoiceDialogueActivityV3.isAlive) {
+            Log.d(TAG, "Activity not alive — first launch in ${INITIAL_LAUNCH_DELAY_MS}ms")
+            handler.postDelayed({ launchDialogueActivity() }, INITIAL_LAUNCH_DELAY_MS)
         }
+
+        // Start perpetual watchdog (removes any previous one to avoid duplicates)
+        handler.removeCallbacks(watchdog)
+        handler.postDelayed(watchdog, INITIAL_LAUNCH_DELAY_MS + WATCHDOG_INTERVAL_MS)
+
         return START_STICKY
     }
 
@@ -90,35 +97,14 @@ class VoiceDialogueService : Service() {
                 .build()
 
             manager.notify(FULLSCREEN_NOTIF_ID, notification)
-            Log.d(TAG, "Full-screen intent notification fired (attempt ${launchRetryCount + 1})")
-            // Schedule liveness check — if Activity dies, retry
-            handler.postDelayed({ checkAndRelaunch() }, LAUNCH_RETRY_DELAY_MS)
+            Log.d(TAG, "Full-screen intent notification fired")
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to launch Activity (attempt ${launchRetryCount + 1})", e)
-            scheduleRetry()
-        }
-    }
-
-    private fun checkAndRelaunch() {
-        if (!VoiceDialogueActivityV3.isAlive) {
-            Log.w(TAG, "Activity not alive after launch — retrying")
-            scheduleRetry()
-        } else {
-            Log.d(TAG, "Activity is alive — boot launch successful")
-        }
-    }
-
-    private fun scheduleRetry() {
-        launchRetryCount++
-        if (launchRetryCount < MAX_LAUNCH_RETRIES) {
-            Log.d(TAG, "Retrying activity launch in ${LAUNCH_RETRY_DELAY_MS}ms (attempt ${launchRetryCount + 1}/$MAX_LAUNCH_RETRIES)...")
-            handler.postDelayed({ launchDialogueActivity() }, LAUNCH_RETRY_DELAY_MS)
-        } else {
-            Log.e(TAG, "Max launch retries ($MAX_LAUNCH_RETRIES) reached. Activity not started.")
+            Log.e(TAG, "Failed to launch Activity", e)
         }
     }
 
     override fun onDestroy() {
+        handler.removeCallbacks(watchdog)
         handler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }

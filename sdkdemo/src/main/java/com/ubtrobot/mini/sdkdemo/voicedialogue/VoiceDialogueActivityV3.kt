@@ -135,9 +135,9 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
         backButton = findViewById(R.id.backButton)
         titleText = findViewById(R.id.titleText)
 
-        // Back button - return to main menu
+        // Back button - minimise instead of finishing so the watchdog doesn't relaunch
         backButton.setOnClickListener {
-            finish()
+            moveTaskToBack(true)
         }
 
         // WiFi settings button
@@ -458,6 +458,12 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
         super.onPause()
         Log.d(TAG, "onPause — disabling mic capture")
         orchestrator?.setMicCaptureAllowed(false)
+    }
+
+    /** Intercept system Back press — minimise instead of finishing. */
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        moveTaskToBack(true)
     }
 
     override fun onDestroy() {

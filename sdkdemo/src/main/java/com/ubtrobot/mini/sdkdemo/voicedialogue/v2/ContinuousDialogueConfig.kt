@@ -85,9 +85,12 @@ data class ContinuousDialogueConfig(
     val ttsTimeoutMs: Long = 15000,
 
     // ═══════════════════════════════════════════════════════════════
-    // OPENAI (used as LLM fallback when rule-based has no answer)
+    // OPENAI (Whisper STT + GPT streaming responses)
     // ═══════════════════════════════════════════════════════════════
     val openAiApiKey: String = "",
+
+    /** Use Whisper API as primary STT (Vosk is offline fallback). Requires openAiApiKey. */
+    val useWhisper: Boolean = true,
 
     // ═══════════════════════════════════════════════════════════════
     // LANGUAGE
