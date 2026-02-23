@@ -24,6 +24,12 @@ android {
             }
         }
 
+        // OpenAI API key — read from local.properties (never committed)
+        def localProps = new Properties()
+        def localPropsFile = rootProject.file("local.properties")
+        if (localPropsFile.exists()) localProps.load(localPropsFile.newDataInputStream())
+        buildConfigField "String", "OPENAI_API_KEY", "\"${localProps.getProperty('openai.api.key', '')}\""
+
         // Embed git commit hash in BuildConfig for debugging "wrong code" issues
         def gitHash = "unknown"
         try {

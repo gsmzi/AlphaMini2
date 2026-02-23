@@ -286,7 +286,7 @@ class VoiceDialogueActivityV3 : AppCompatActivity(), ContinuousOrchestratorListe
             enableVoiceWakeup = true,
             enableButtonWakeup = true,
             wakeWords = listOf("hello wukong", "hi wukong", "wukong"),
-            openAiApiKey = "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"
+            openAiApiKey = BuildConfig.OPENAI_API_KEY
         )
 
         Log.d(TAG, "ORCH_FACTORY=ContinuousSpeechOrchestrator lang=${currentLanguage.name}")
