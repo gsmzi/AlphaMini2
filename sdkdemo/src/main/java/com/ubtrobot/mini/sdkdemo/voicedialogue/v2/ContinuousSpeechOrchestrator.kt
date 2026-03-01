@@ -197,7 +197,7 @@ class ContinuousSpeechOrchestrator(
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     fun initialize() {
-        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} STT=Whisper+Vosk TTS=EdgeTts")
+        Log.d(TAG, "Initializing ContinuousSpeechOrchestrator (local=${config.useLocalProcessing}) gitHash=${BuildConfig.GIT_HASH} STT=Whisper-only TTS=GoogleTts")
 
         // Initialize reusable audio components
         initializeAudioComponents()
@@ -263,46 +263,18 @@ class ContinuousSpeechOrchestrator(
         // Initialize OpenAI client (Whisper STT + GPT streaming responses)
         if (config.openAiApiKey.isNotBlank()) {
             openAiClient = OpenAiClient(config.openAiApiKey)
-            if (config.useWhisper) {
-                whisperClient = WhisperSttClient(config.openAiApiKey)
-                Log.d(TAG, "WhisperSttClient initialized (primary STT)")
-            }
+            whisperClient = WhisperSttClient(config.openAiApiKey)
+            Log.d(TAG, "WhisperSttClient initialized (sole STT — no Vosk fallback)")
             Log.d(TAG, "OpenAI client initialized")
         } else {
-            Log.d(TAG, "No OpenAI API key — Whisper + GPT disabled, using Vosk only")
+            Log.e(TAG, "No OpenAI API key — Whisper disabled, STT unavailable")
         }
 
-        // Always create Vosk — it's the offline fallback for Whisper
-        localRecognizer = LocalSpeechRecognizer(context)
-
-        scope.launch(Dispatchers.IO) {
-            try {
-                withContext(Dispatchers.Main) {
-                    listener?.onStateChanged(ContinuousState.IDLE)
-                }
-                Log.d(TAG, "Loading Vosk speech recognition models (EN+DE)...")
-                localRecognizer?.initialize(
-                    loadEnglish = true,
-                    loadGerman = true
-                ) { progress ->
-                    Log.d(TAG, "Vosk: $progress")
-                }
-
-                Log.d(TAG, "Initializing embedded TTS engine (offline fallback)...")
-                val ttsOk = embeddedTtsEngine?.initialize(currentLanguage) == true
-                if (!ttsOk) {
-                    Log.w(TAG, "Embedded TTS not available (EdgeTts is primary)")
-                }
-
-                val ready = localRecognizer?.isReady == true
-                val sttLabel = if (whisperClient != null) "Whisper+Vosk" else "Vosk"
-                Log.d(TAG, "Local components ready: stt=$sttLabel, tts=EdgeTts, voskReady=$ready")
-                localReady.complete(ready)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to initialize local components", e)
-                localReady.complete(false)
-            }
+        // No Vosk — Whisper is the only STT. Signal ready immediately.
+        scope.launch(Dispatchers.Main) {
+            listener?.onStateChanged(ContinuousState.IDLE)
         }
+        localReady.complete(true)
     }
 
     private fun initializeAudioComponents() {
@@ -526,17 +498,13 @@ class ContinuousSpeechOrchestrator(
 
         try {
             if (config.useLocalProcessing) {
-                // Record audio once, then route to Whisper (online) or Vosk (offline fallback)
+                // Record audio, send to Whisper — sole STT, no Vosk fallback
                 val audioData = recordUserSpeech()
                 if (audioData == null || audioData.isEmpty()) {
                     handleNoSpeech()
                     return
                 }
-                if (whisperClient != null && isNetworkAvailable()) {
-                    captureWithWhisper(audioData)      // Whisper primary
-                } else {
-                    captureWithVoskFallback(audioData) // Vosk offline fallback
-                }
+                captureWithWhisper(audioData)
             } else {
                 // Remote path: record audio, send to server
                 val audioData = recordUserSpeech()
@@ -650,8 +618,9 @@ class ContinuousSpeechOrchestrator(
     }
 
     /**
-     * Whisper path: POST recorded audio to OpenAI Whisper for transcription,
-     * then process via streaming GPT. Falls back to Vosk if Whisper fails.
+     * Whisper-only STT path: POST recorded audio to OpenAI Whisper for transcription,
+     * then process via streaming GPT. No Vosk fallback — if Whisper returns nothing,
+     * treat as no-speech.
      */
     private suspend fun captureWithWhisper(audioData: ByteArray) {
         val langCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
@@ -664,8 +633,8 @@ class ContinuousSpeechOrchestrator(
         }
 
         if (transcription.isNullOrBlank()) {
-            Log.w(TAG, "Whisper returned null/blank — falling back to Vosk")
-            captureWithVoskFallback(audioData)
+            Log.w(TAG, "Whisper returned null/blank — treating as no-speech")
+            handleNoSpeech()
             return
         }
 
@@ -1872,8 +1841,6 @@ class ContinuousSpeechOrchestrator(
         // Release local components
         googleStt?.release()
         googleStt = null
-        localRecognizer?.release()
-        localRecognizer = null
         whisperClient = null
         embeddedTtsEngine?.release()
         embeddedTtsEngine = null
