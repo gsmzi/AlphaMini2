@@ -27,10 +27,10 @@ data class ContinuousDialogueConfig(
     // ═══════════════════════════════════════════════════════════════
 
     /** Short pause during speech - keep listening (user thinking) */
-    val silenceShortPauseMs: Long = 800,
+    val silenceShortPauseMs: Long = 500,
 
     /** End of utterance - process speech, stay in session */
-    val silenceEndOfUtteranceMs: Long = 1500,
+    val silenceEndOfUtteranceMs: Long = 900,
 
     /** Long silence after robot speaks - prompt user gently */
     val silenceLongMs: Long = 5000,

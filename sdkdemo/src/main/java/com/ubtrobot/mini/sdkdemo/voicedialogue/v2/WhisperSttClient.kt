@@ -42,7 +42,10 @@ class WhisperSttClient(private val apiKey: String) {
             "transcribed by",
             "www.",
             "♪", "[ musik ]", "[musik]",
-            "[applaus]", "[gelächter]", "[laughter]", "[music]"
+            "[applaus]", "[gelächter]", "[laughter]", "[music]",
+            // German broadcaster names — common hallucinations for short audio
+            "swr ", "swr2", "swr 2", " ard ", "ndr ", " zdf ", " rtl ",
+            "im auftrag des", "für funk,"
         )
     }
 

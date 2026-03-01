@@ -63,8 +63,11 @@ class LocalResponseGenerator {
         // ═══════════════════════════════════════════════════════════════
         val DANCE_WORDS = listOf(
             "dance", "dances", "dancing", "danced", "dancer",
-            "tanz", "tanzen", "tanzt", "tai chi",
-            "can you dance", "let's dance", "do a dance", "show me a dance", "dance for me"
+            "tanz", "tanzen", "tanzt", "tanze", "tanzend",
+            "tai chi",
+            "can you dance", "let's dance", "do a dance", "show me a dance", "dance for me",
+            "kannst du tanzen", "mach einen tanz", "zeig mir einen tanz", "tanz für mich",
+            "tanz mal", "tanzt du", "bitte tanz", "mach tanz"
         )
 
         val WAVE_WORDS = listOf(
@@ -90,6 +93,20 @@ class LocalResponseGenerator {
             "bow", "bows", "bowing", "bowed",
             "verbeugen", "verbeug", "verbeugung",
             "take a bow"
+        )
+
+        val GREETING_WORDS = listOf(
+            "hello", "hi", "hey",
+            "hallo", "hej",
+            "good morning", "good afternoon", "good evening",
+            "guten morgen", "guten tag", "guten abend",
+            "gute nacht", "servus", "moin", "grüß gott", "gruss gott"
+        )
+
+        val THANK_WORDS = listOf(
+            "thank you", "thanks", "thank you very much", "many thanks",
+            "danke", "danke schön", "dankeschön", "danke sehr", "vielen dank",
+            "danke dir", "danke ihnen"
         )
 
         // Greetings, jokes, help, thanks etc. are all handled by OpenAI now
@@ -129,7 +146,12 @@ class LocalResponseGenerator {
         val action: String,
         val keepSession: Boolean = true,
         val conversationEnd: Boolean = false,
-        val askFollowup: Boolean = false
+        val askFollowup: Boolean = false,
+        /** If set, orchestrator plays [speech], waits [pauseBeforePart2Ms], then plays this. */
+        val speechPart2: String? = null,
+        val pauseBeforePart2Ms: Long = 0L,
+        /** If true, orchestrator performs a bow action after the final speech chunk. */
+        val bowAtEnd: Boolean = false
     )
 
     fun isStopPhrase(text: String): Boolean {
@@ -261,6 +283,52 @@ class LocalResponseGenerator {
             val responses = if (isGerman) listOf("Ich bin Alpha Mini, dein Roboter-Kumpel!", "Nenn mich Alpha Mini!", "Alpha Mini zu deinen Diensten!")
                             else listOf("I'm Alpha Mini, your robot buddy!", "Call me Alpha Mini! Nice to meet you!", "Alpha Mini at your service!")
             return LocalResponse(responses.random(), "happy", "wave")
+        }
+
+        // Greeting → wave + happy
+        if (matchesAny(lower, GREETING_WORDS)) {
+            Log.d(TAG, "[GREETING] detected in: '$lower'")
+            val responses = if (isGerman)
+                listOf("Hallo! Schön dich zu sehen!", "Hey! Wie geht's?", "Hallo! Was kann ich für dich tun?")
+            else listOf("Hello! Nice to see you!", "Hey there! How are you?", "Hi! How can I help?")
+            return LocalResponse(responses.random(), "happy", "wave")
+        }
+
+        // Thank you → bow
+        if (matchesAny(lower, THANK_WORDS)) {
+            Log.d(TAG, "[THANK] detected in: '$lower'")
+            val responses = if (isGerman)
+                listOf("Bitte sehr!", "Gern geschehen!", "Kein Problem!")
+            else listOf("You're welcome!", "My pleasure!", "Anytime!")
+            return LocalResponse(responses.random(), "happy", "bow")
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // HARDCODED FAQ — exact answers, bypass OpenAI
+        // ═══════════════════════════════════════════════════════════════
+
+        // Didacta 2026 — match root "didact"/"didakt" to catch all Whisper variants:
+        // didacta, didakta, didakter, didacter, didactic, etc.
+        if ("didact" in lower || "didakt" in lower) {
+            Log.d(TAG, "[FAQ] Didacta question detected")
+            return LocalResponse(
+                speech = "2026 findet die Didacta vom 10.03. bis 14.03. in Köln statt.",
+                emotion = "excited",
+                action = "nod",
+                speechPart2 = "Ich bin auch auf der Didacta dabei und freue mich riesig, dich zu begrüßen. Komm vorbei, ich empfange dich mit meinem berühmten Tanz und zeige dir, was ich alles kann!",
+                pauseBeforePart2Ms = 5000L,
+                bowAtEnd = true
+            )
+        }
+
+        // Terra Robotics — also matches Whisper mishearings ("trainer robotics", "terra robotic", etc.)
+        if ("terra robotics" in lower || "trainer robotics" in lower || "terra robotic" in lower) {
+            Log.d(TAG, "[FAQ] Terra Robotics question detected")
+            return LocalResponse(
+                speech = "Terra Robotics ist ein Unternehmen, das Serviceroboter für verschiedene Branchen anbietet. Es gehört zur Wortmann Gruppe und ist Teil der Terra Connect GmbH. Die Roboter helfen zum Beispiel in der Gastronomie, im Einzelhandel oder in der Gebäudereinigung, indem sie Aufgaben automatisieren und Menschen bei ihrer Arbeit unterstützen.",
+                emotion = "excited",
+                action = "wave"
+            )
         }
 
         // ═══════════════════════════════════════════════════════════════

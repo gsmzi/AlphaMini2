@@ -124,10 +124,39 @@ class ContinuousSpeechOrchestrator(
     @Volatile
     private var allowMicCapture = false
 
-    // Edge TTS (online, young male voice)
-    private val edgeTts = EdgeTts()
+    // Google Translate TTS (reliable, auto-splits long texts, no API key needed)
+    private val googleTts = GoogleTranslateTts()
     @Volatile
     private var activeMediaPlayer: MediaPlayer? = null
+
+    // ═══════════════════════════════════════════════════════════════
+    // DYNAMIC BEHAVIOR POOLS — no sad expression
+    // ═══════════════════════════════════════════════════════════════
+    // Expressions: happy, excited, thinking, surprised, comfort  (sad excluded)
+    private val dynamicExpressions = listOf("emo_007", "emo_008", "emo_010", "codemao8", "emo_006")
+    // Actions: wave, hands-up, clap, think, shake-head, nod
+    private val dynamicActions     = listOf("010", "017", "019", "021", "018", "011")
+    // Light colour paired with each expression
+    private val dynamicLight = mapOf(
+        "emo_007"  to BehaviorPlan.LightConfig(mode = "green",  color = 0x00FF00),
+        "emo_008"  to BehaviorPlan.LightConfig(mode = "green",  color = 0x00FF00),
+        "emo_010"  to BehaviorPlan.LightConfig(mode = "blue",   color = 0x0000FF),
+        "codemao8" to BehaviorPlan.LightConfig(mode = "yellow", color = 0xFFFF00),
+        "emo_006"  to BehaviorPlan.LightConfig(mode = "normal", color = 0x1E1E1E)
+    )
+
+    /** Pick a random expression + action + matching light. No sad, no dance. */
+    private fun randomDynamicPlan(): BehaviorPlan {
+        val expr  = dynamicExpressions.random()
+        val light = dynamicLight[expr] ?: BehaviorPlan.LightConfig(mode = "green", color = 0x00FF00)
+        return BehaviorPlan(
+            expression = expr,
+            action     = dynamicActions.random(),
+            light      = light,
+            preRollMs  = 0L,
+            postRollMs = 200L
+        )
+    }
 
     /** Callback invoked when the user switches language via voice command. */
     var onLanguageChanged: ((DialogueConfig.Language) -> Unit)? = null
@@ -606,6 +635,13 @@ class ContinuousSpeechOrchestrator(
         }
 
         val localResponse = generator.generateResponse(transcription, languageCode)
+
+        // Two-part FAQ response (e.g. Didacta: speak part 1, pause, speak part 2)
+        if (localResponse.speech.isNotBlank() && localResponse.speechPart2 != null) {
+            handleTwoPartResponse(localResponse)
+            return
+        }
+
         val finalResponse = enhanceWithOpenAi(localResponse, transcription, languageCode, generator)
         val response = generator.toLLMResponse(finalResponse, transcription, ttsCode)
 
@@ -656,11 +692,15 @@ class ContinuousSpeechOrchestrator(
         // Check for language switch ("switch" / "wechseln") before anything else
         if (handleLanguageSwitch(transcription)) return
 
-        // 1. Check action words + stop phrases locally (instant, no network needed)
+        // 1. Check action words, FAQ, stop phrases locally (instant, no network needed)
         val localResponse = generator.generateResponse(transcription, langCode)
         if (localResponse.speech.isNotBlank()) {
-            // Action command (dance, wave, clap, etc.) or stop phrase — no GPT needed
-            handleProcessedResponse(generator.toLLMResponse(localResponse, transcription, ttsCode))
+            if (localResponse.speechPart2 != null) {
+                // Two-part FAQ response (speak part 1, pause, speak part 2)
+                handleTwoPartResponse(localResponse)
+            } else {
+                handleProcessedResponse(generator.toLLMResponse(localResponse, transcription, ttsCode))
+            }
             return
         }
 
@@ -672,8 +712,6 @@ class ContinuousSpeechOrchestrator(
             return
         }
 
-        // Conversational action IDs to rotate through (wave, nod, clap)
-        val conversationalActions = listOf("010", "011", "019")
         var firstSentenceSpoken = false
         var streamError: Exception? = null
 
@@ -726,16 +764,11 @@ class ContinuousSpeechOrchestrator(
                         if (!firstSentenceSpoken) {
                             firstSentenceSpoken = true
                             stateMachine.transition(ContinuousState.SPEAKING, "first sentence ready")
-                            val plan = BehaviorPlan(
-                                expression = "emo_007",
-                                action = conversationalActions.random(),
-                                light = BehaviorPlan.LightConfig(mode = "green", color = 0x00FF00),
-                                preRollMs = 0L,
-                                postRollMs = 300L
-                            )
-                            scope.launch(Dispatchers.Main) {
-                                behaviorMapper.executeBehaviorPlan(plan, 5000L) {}
-                            }
+                        }
+                        // New random expression + action for every sentence chunk → dynamic appearance
+                        val dur = (mp3.size.toLong() * 8 * 1000) / 48000
+                        scope.launch(Dispatchers.Main) {
+                            behaviorMapper.executeBehaviorPlan(randomDynamicPlan(), dur) {}
                         }
                         playMp3AndWait(mp3)
                     } else {
@@ -763,14 +796,68 @@ class ContinuousSpeechOrchestrator(
     }
 
     /**
+     * Two-part FAQ response: speak part 1, wait pauseBeforePart2Ms, then speak part 2.
+     * Behavior plans run concurrently with each speech chunk:
+     *   Part 1 — emotion/action from the LocalResponse (e.g. excited + nod)
+     *   Part 2 — always excited + wave (invitation / enthusiastic close)
+     */
+    private suspend fun handleTwoPartResponse(local: LocalResponseGenerator.LocalResponse) {
+        if (!sessionActive.get()) return
+        val langCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
+
+        stateMachine.transition(ContinuousState.SPEAKING, "FAQ two-part response")
+
+        // ── Part 1 — random dynamic behavior ─────────────────────────
+        listener?.onResponse(local.speech)
+        val mp3Part1 = synthesizeChunk(local.speech, langCode)
+        if (mp3Part1 != null && mp3Part1.isNotEmpty()) {
+            val dur1 = (mp3Part1.size.toLong() * 8 * 1000) / 48000
+            scope.launch(Dispatchers.Main) { behaviorMapper.executeBehaviorPlan(randomDynamicPlan(), dur1) {} }
+            playMp3AndWait(mp3Part1)
+        }
+
+        if (local.pauseBeforePart2Ms > 0) delay(local.pauseBeforePart2Ms)
+
+        // ── Part 2 — excited + wave ───────────────────────────────────
+        val part2 = local.speechPart2 ?: run { afterSpeaking(); return }
+        listener?.onResponse(part2)
+        val mp3Part2 = synthesizeChunk(part2, langCode)
+        if (mp3Part2 != null && mp3Part2.isNotEmpty()) {
+            val plan2 = BehaviorPlan(
+                expression = "emo_008",  // excited
+                action = "010",          // wave / greeting
+                light = BehaviorPlan.LightConfig(mode = "green", color = 0x00FF00),
+                preRollMs = 0L, postRollMs = 200L
+            )
+            val dur2 = (mp3Part2.size.toLong() * 8 * 1000) / 48000
+            scope.launch(Dispatchers.Main) { behaviorMapper.executeBehaviorPlan(plan2, dur2) {} }
+            playMp3AndWait(mp3Part2)
+        }
+
+        // ── Bow at end (e.g. after Didacta invitation) ────────────────
+        if (local.bowAtEnd && sessionActive.get()) {
+            val bowPlan = BehaviorPlan(
+                expression = "emo_007",  // happy
+                action = "016",          // bow
+                light = BehaviorPlan.LightConfig(mode = "green", color = 0x00FF00),
+                preRollMs = 0L, postRollMs = 200L
+            )
+            scope.launch(Dispatchers.Main) { behaviorMapper.executeBehaviorPlan(bowPlan, 4000L) {} }
+            delay(3500L) // wait for bow to finish before reopening mic
+        }
+
+        afterSpeaking()
+    }
+
+    /**
      * Synthesize a single sentence to MP3 bytes. Safe to call from any dispatcher.
      * Returns null on failure.
      */
     private suspend fun synthesizeChunk(text: String, langCode: String): ByteArray? {
         return try {
-            edgeTts.synthesize(text, langCode)
+            googleTts.synthesize(text, langCode)
         } catch (e: Exception) {
-            Log.e(TAG, "EdgeTTS synthesis failed for: '${text.take(40)}'", e)
+            Log.e(TAG, "TTS synthesis failed for: '${text.take(40)}'", e)
             null
         }
     }
@@ -1110,19 +1197,19 @@ class ContinuousSpeechOrchestrator(
         val behaviorPlan = behaviorMapper.createBehaviorPlan(response)
 
         if (config.useLocalProcessing) {
-            // LOCAL PATH: EdgeTTS (online, natural voice) + synchronized movement
+            // LOCAL PATH: Google TTS (reliable, auto-splits long texts) + synchronized movement
             metrics.tTtsStart = System.currentTimeMillis()
 
             // Synthesize MP3 first so we can play action + speech concurrently
             val langCode = if (currentLanguage == DialogueConfig.Language.DE) "de" else "en"
             val mp3 = try {
-                edgeTts.synthesize(formattedSpeech, langCode)
+                googleTts.synthesize(formattedSpeech, langCode)
             } catch (e: Exception) {
-                Log.e(TAG, "EdgeTTS synthesis failed", e)
+                Log.e(TAG, "Google TTS synthesis failed", e)
                 null
             }
             if (mp3 == null || mp3.isEmpty()) {
-                Log.e(TAG, "EdgeTTS returned null/empty for speakResponse")
+                Log.e(TAG, "Google TTS returned null/empty for speakResponse")
                 handleTTSError()
                 return
             }
@@ -1242,15 +1329,33 @@ class ContinuousSpeechOrchestrator(
         // Touch session to update activity time
         currentSession?.touch()
 
-        // Auto-start listening for next turn
-        // Keep delay short - actions run asynchronously and won't be interrupted
+        // Auto-start listening for next turn.
+        // For long actions (dance, taichi, bow) wait until the animation finishes
+        // before opening the mic — otherwise the robot starts hearing mid-action.
+        val listenDelay = getActionPostDelay(lastLLMResponse?.action)
+        Log.d(TAG, "Post-action listen delay: ${listenDelay}ms (action=${lastLLMResponse?.action})")
         scope.launch {
-            delay(500L) // Brief natural pause
+            delay(listenDelay)
             if (stateMachine.currentState == ContinuousState.LISTENING_FOR_FOLLOWUP) {
                 Log.d(TAG, "Starting capture for next turn")
                 startCapturing()
             }
         }
+    }
+
+    /**
+     * How long to wait after speaking before opening the mic for the next turn.
+     * Long actions (dance, taichi, bow) need extra time so the animation
+     * finishes before the robot starts listening again.
+     */
+    private fun getActionPostDelay(action: String?): Long = when (action) {
+        "dance_0008" -> 10000L  // full dance animation ~10s
+        "014"        ->  8000L  // taichi
+        "016"        ->  3500L  // bow
+        "019"        ->  2500L  // clap
+        "017"        ->  2000L  // wave / hands-up
+        "010"        ->  2000L  // greeting wave
+        else         ->   500L
     }
 
     private fun startSilenceMonitor() {
@@ -1323,9 +1428,18 @@ class ContinuousSpeechOrchestrator(
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
     private suspend fun playWakeupCue() {
-        behaviorMapper.setStateExpression(DialogueState.LISTENING)
-        behaviorMapper.setStateLight(DialogueState.LISTENING)
-        delay(50) // Minimal pause for expression to start
+        // Wave with happy expression as greeting, then settle into listening
+        val plan = BehaviorPlan(
+            expression = "emo_007",
+            action = "010",  // greeting wave
+            light = BehaviorPlan.LightConfig(mode = "green", color = 0x00FF00),
+            preRollMs = 0L,
+            postRollMs = 200L
+        )
+        scope.launch(Dispatchers.Main) {
+            behaviorMapper.executeBehaviorPlan(plan, 2000L) {}
+        }
+        delay(50)
     }
 
     private suspend fun sayGoodbye() {
@@ -1546,7 +1660,7 @@ class ContinuousSpeechOrchestrator(
         Log.d(TAG, "Google TTS speaking: '${text.take(60)}...' [$langCode]")
 
         val mp3 = try {
-            edgeTts.synthesize(text, langCode)
+            googleTts.synthesize(text, langCode)
         } catch (e: Exception) {
             Log.e(TAG, "Google TTS synthesis failed", e)
             null
