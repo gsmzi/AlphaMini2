@@ -533,6 +533,3 @@ Working usage examples: `ExpressActivity.kt`, `ActionActivity.kt`, `MainActivity
 
 ---
 
-## License
-
-See [LICENSE](LICENSE).
