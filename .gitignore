@@ -24,3 +24,4 @@ __pycache__/
 *.pyc
 *.pyo
 SDK/llm_server/vosk-model-*/
+*.apk
