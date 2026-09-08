@@ -1,0 +1,46 @@
+# Android / Gradle build outputs
+*.iml
+.gradle/
+/build/
+sdkdemo/build/
+sdkdemo/.cxx/
+**/build/
+/captures
+.externalNativeBuild/
+.externalNativeBuild
+
+# IDE
+.idea/
+**/.idea/
+*.iml
+
+# Local config (contains SDK paths)
+/local.properties
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# LLM server Vosk models (159MB, only needed for PC server mode)
+# Download separately: https://alphacephei.com/vosk/models
+llm_server/vosk-model-*/
+
+# Legacy
+mini-outer-sdk-demo/app/build/
+
+# NOTE: The following large files ARE intentionally tracked:
+# sdkdemo/libs/*.aar                       (robot SDK + Vosk + JNA)
+# sdkdemo/src/main/jniLibs/**/*.so         (eSpeak native libs)
+# sdkdemo/src/main/assets/espeak-ng-data/  (TTS voice data)
+# sdkdemo/src/main/assets/model-en-us/     (Vosk EN model)
+# sdkdemo/src/main/assets/model-de/        (Vosk DE model)
+# These are required for the app to work and must be in the repo.

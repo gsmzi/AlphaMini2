@@ -3,9 +3,19 @@ REM ========================================================================
 REM Build and Install Voice Dialogue App
 REM ========================================================================
 
-set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr
-set ADB_PATH=C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe
 set PROJECT_DIR=%~dp0
+if exist "%PROJECT_DIR%..\tools\scrcpy\adb.exe" (
+    set "ADB_PATH=%PROJECT_DIR%..\tools\scrcpy\adb.exe"
+) else if exist "%PROJECT_DIR%tools\scrcpy\adb.exe" (
+    set "ADB_PATH=%PROJECT_DIR%tools\scrcpy\adb.exe"
+) else if exist "%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe" (
+    set "ADB_PATH=%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"
+) else (
+    set "ADB_PATH=adb.exe"
+)
+if exist "C:\Program Files\Android\Android Studio\jbr" (
+    set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
+)
 
 echo ========================================
 echo Building and Installing App

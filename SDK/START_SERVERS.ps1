@@ -6,9 +6,19 @@ Write-Host " Robot Voice Dialogue - Startup Script" -ForegroundColor Cyan
 Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
-$ADB = "C:\Users\wissem.malleh\Downloads\scrcpy-win64-v3.3.4\scrcpy-win64-v3.3.4\adb.exe"
-$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $BaseDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+if (Test-Path "$BaseDir\..\tools\scrcpy\adb.exe") {
+    $ADB = "$BaseDir\..\tools\scrcpy\adb.exe"
+} elseif (Test-Path "$BaseDir\tools\scrcpy\adb.exe") {
+    $ADB = "$BaseDir\tools\scrcpy\adb.exe"
+} elseif (Get-Command adb -ErrorAction SilentlyContinue) {
+    $ADB = "adb"
+} else {
+    $ADB = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+}
+if (Test-Path "C:\Program Files\Android\Android Studio\jbr") {
+    $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+}
 
 # Step 1: ADB Reverse
 Write-Host "[1/5] Setting up ADB reverse port forwarding..." -ForegroundColor Yellow

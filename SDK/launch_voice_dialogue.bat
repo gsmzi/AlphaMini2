@@ -4,8 +4,16 @@ REM Voice Dialogue App Launcher
 REM Starts all servers and launches the app on the robot
 REM ========================================================================
 
-set ADB_PATH=C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe
 set PROJECT_DIR=%~dp0
+if exist "%PROJECT_DIR%..\tools\scrcpy\adb.exe" (
+    set "ADB_PATH=%PROJECT_DIR%..\tools\scrcpy\adb.exe"
+) else if exist "%PROJECT_DIR%tools\scrcpy\adb.exe" (
+    set "ADB_PATH=%PROJECT_DIR%tools\scrcpy\adb.exe"
+) else if exist "%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe" (
+    set "ADB_PATH=%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"
+) else (
+    set "ADB_PATH=adb.exe"
+)
 
 echo ========================================
 echo Voice Dialogue App Launcher

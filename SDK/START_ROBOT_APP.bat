@@ -4,9 +4,23 @@ echo  Robot Voice Dialogue - Startup Script
 echo ============================================
 echo.
 
-set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr
-set ADB_PATH=C:\Users\wissem.malleh\AppData\Local\Android\Sdk\platform-tools\adb.exe
-set SCRCPY_PATH=C:\Users\wissem.malleh\Downloads\scrcpy-win64-v3.3.4\scrcpy-win64-v3.3.4\scrcpy.exe
+set "PROJECT_DIR=%~dp0"
+if exist "%PROJECT_DIR%..\tools\scrcpy\adb.exe" (
+    set "ADB_PATH=%PROJECT_DIR%..\tools\scrcpy\adb.exe"
+    set "SCRCPY_PATH=%PROJECT_DIR%..\tools\scrcpy\scrcpy.exe"
+) else if exist "%PROJECT_DIR%tools\scrcpy\adb.exe" (
+    set "ADB_PATH=%PROJECT_DIR%tools\scrcpy\adb.exe"
+    set "SCRCPY_PATH=%PROJECT_DIR%tools\scrcpy\scrcpy.exe"
+) else if exist "%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe" (
+    set "ADB_PATH=%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"
+    set "SCRCPY_PATH=scrcpy.exe"
+) else (
+    set "ADB_PATH=adb.exe"
+    set "SCRCPY_PATH=scrcpy.exe"
+)
+if exist "C:\Program Files\Android\Android Studio\jbr" (
+    set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
+)
 
 echo [1/6] Starting scrcpy (no audio mode)...
 start "" "%SCRCPY_PATH%" --no-audio

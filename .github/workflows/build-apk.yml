@@ -1,0 +1,64 @@
+name: Build Alpha Mini APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "ndk;26.3.11579264" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Make Gradle executable
+        run: chmod +x SDK/gradlew
+
+      - name: Build Debug APK
+        working-directory: ./SDK
+        run: ./gradlew :sdkdemo:assembleDebug --stacktrace
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AlphaMini2-sdkdemo-debug
+          path: SDK/sdkdemo/build/outputs/apk/debug/sdkdemo-debug.apk
+          if-no-files-found: error
+
+      - name: Create or Update Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: "Alpha Mini 2 - Aktuelle APK"
+          body: |
+            Automatisch erstellte Installations-APK für den UBTECH Alpha Mini 2.
+
+            ### Installation:
+            1. Lade `sdkdemo-debug.apk` unten herunter.
+            2. Ziehe die Datei per Drag & Drop direkt in das geöffnete `scrcpy`-Fenster des Roboters.
+            *Oder:* Lege die Datei in den Ordner und starte `2_APP_INSTALLIEREN.bat`.
+          files: SDK/sdkdemo/build/outputs/apk/debug/sdkdemo-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
