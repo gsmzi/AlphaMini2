@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaBlock - Roboter-Programmierung für die 5. Klasse</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ====================================================================
+         OBERSTE LEISTE: WERKZEUGE & STEUERUNG (SCRATCH-LOOK)
+         ==================================================================== -->
+    <header class="header-bar">
+        <div class="brand-section">
+            <div class="logo-text">
+                🤖 AlphaBlock
+                <span class="tag-badge">5. Klasse</span>
+            </div>
+        </div>
+
+        <div class="controls-section">
+            <!-- 🚩 Grüne Flagge: Start -->
+            <button id="btnStart" class="btn-flag" title="Programm ausführen (Grüne Flagge)">🚩</button>
+            <!-- 🛑 Rotes Stoppschild: Anhalten -->
+            <button id="btnStop" class="btn-stop" title="Programm sofort anhalten">🛑</button>
+
+            <!-- Beispiele Dropdown -->
+            <select id="exampleSelect" class="example-dropdown" title="Wähle eine fertige Vorlage">
+                <option value="">💡 Beispiele & Missionen...</option>
+                <option value="greeting">👋 1. Begrüßung & Vorstellen</option>
+                <option value="dance">💃 2. Roboter Dance-Party</option>
+                <option value="joke">😂 3. Witze-Erzähler</option>
+                <option value="fitness">🤸 4. Roboter-Gymnastik</option>
+                <option value="traffic_light">🚦 5. Das Ampel-Spiel</option>
+                <option value="emotions">🎭 6. Gefühle-Theater</option>
+            </select>
+
+            <!-- Datei-Aktionen -->
+            <button id="btnNew" class="header-btn" title="Neue leere Arbeitsfläche">📄 Neu</button>
+            <button id="btnOpen" class="header-btn" title="Gespeichertes Projekt öffnen">📂 Öffnen</button>
+            <button id="btnSave" class="header-btn" title="Projekt auf dem Computer speichern">💾 Speichern</button>
+            <input type="file" id="fileInput" accept=".alphablock,.xml" style="display: none;">
+
+            <!-- Code-Vorschau für neugierige Schüler -->
+            <button id="btnViewCode" class="header-btn" title="Echten Python-Code hinter den Blöcken ansehen">🐍 Python-Code</button>
+        </div>
+
+        <div class="status-section">
+            <div class="status-badge" id="robotStatusBadge" title="Verbindungsstatus zum Alpha Mini Roboter">
+                <div class="status-dot offline" id="robotStatusDot"></div>
+                <span id="robotStatusText">Simulator aktiv</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ====================================================================
+         HAUPTBEREICH: BLOCKLY ARBEITSFLÄCHE & ROBOTER-SIMULATOR
+         ==================================================================== -->
+    <main class="main-container">
+        
+        <!-- Linke Seite: Blockly Scratch Arbeitsfläche -->
+        <section class="workspace-area" id="blocklyArea">
+            <div id="blocklyDiv"></div>
+        </section>
+
+        <!-- Rechte Seite: Virtueller Alpha Mini Roboter (Simulator) -->
+        <aside class="simulator-panel">
+            <div class="simulator-header">
+                <div class="sim-title">
+                    <span>🤖 Roboter-Bühne</span>
+                </div>
+                <div class="mode-toggle">
+                    <select id="modeSelect" class="mode-select" title="Wähle, worauf dein Code ausgeführt werden soll">
+                        <option value="simulator">🖥️ Simulator</option>
+                        <option value="robot">🤖 Echter Roboter</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="robot-notice" id="robotModeNotice">
+                💡 <b>Live-Modus aktiv:</b> Dein Programm läuft jetzt gleichzeitig auf dem echten Alpha Mini Roboter!
+            </div>
+
+            <!-- Interaktive Roboter-Bühne -->
+            <div class="robot-stage">
+                
+                <!-- Sprechblase -->
+                <div class="speech-bubble" id="simSpeechBubble">
+                    <span id="simSpeechText">Hallo, ich bin Alpha Mini!</span>
+                </div>
+
+                <!-- Alpha Mini 2D Avatar -->
+                <div class="robot-body" id="robotAvatar">
+                    
+                    <!-- Kopf & Ohren -->
+                    <div class="robot-head">
+                        <!-- Linkes Ohr LED -->
+                        <div class="ear left">
+                            <div class="led-indicator" id="simLeftEar"></div>
+                        </div>
+
+                        <!-- LCD Augen-Display -->
+                        <div class="screen-display">
+                            <div class="eye eye-normal" id="simLeftEye"></div>
+                            <div class="eye eye-normal" id="simRightEye"></div>
+                        </div>
+
+                        <!-- Rechtes Ohr LED -->
+                        <div class="ear right">
+                            <div class="led-indicator" id="simRightEar"></div>
+                        </div>
+                    </div>
+
+                    <!-- Oberkörper & Arme -->
+                    <div class="robot-torso">
+                        <div class="arm left"></div>
+                        
+                        <!-- Brust-LED -->
+                        <div class="chest-circle">
+                            <div class="chest-led" id="simChestLed"></div>
+                        </div>
+
+                        <div class="arm right"></div>
+                    </div>
+
+                </div>
+
+                <!-- Aktions-Badge (z.B. "Tanzen...") -->
+                <div class="action-badge" id="simActionBadge">Aktion</div>
+            </div>
+        </aside>
+
+    </main>
+
+    <!-- ====================================================================
+         PYTHON CODE VORSCHAU MODAL
+         ==================================================================== -->
+    <div class="modal-overlay" id="codeModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span>🐍 So sieht dein Programm in echtem Python-Code aus:</span>
+                <button class="modal-close" id="btnCloseCode">✕</button>
+            </div>
+            <pre class="code-content" id="pythonCode"># Dein Code wird hier angezeigt...</pre>
+        </div>
+    </div>
+
+    <!-- ====================================================================
+         SCRIPTE: BLOCKLY, BIBLIOTHEKEN & ALPHABLOCK MODULE
+         ==================================================================== -->
+    <script src="lib/blockly.min.js"></script>
+    <script src="lib/javascript.min.js"></script>
+    <script src="lib/python.min.js"></script>
+    <script src="lib/de.js"></script>
+
+    <!-- AlphaBlock Custom Module -->
+    <script src="js/blocks.js"></script>
+    <script src="js/generator.js"></script>
+    <script src="js/simulator.js"></script>
+    <script src="js/executor.js"></script>
+    <script src="js/examples.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

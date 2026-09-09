@@ -92,6 +92,25 @@ Da die Installationsdatei `sdkdemo-debug.apk` bereits im Ordner liegt, geht die 
 
 ---
 
+## 🧩 Schritt 5: Scratch-Blockprogrammierung für Schüler (5. Klasse)
+
+Für den Informatikunterricht oder die Roboter-AG in der 5. Klasse gibt es die blockbasierte Programmierumgebung **AlphaBlock** (funktioniert wie Scratch 3.0):
+
+1. **Starten:** Doppelklick auf:
+   ```
+   3_SCRATCH_BLOCKLY_STARTEN.bat
+   ```
+2. **Im Browser programmieren:**
+   - Der Webbrowser öffnet sich sofort automatisch.
+   - 100% auf Deutsch mit bunten Blöcken für Sprache, Mimik, Tanzen, Lichter und Schleifen.
+   - **Mit virtuellem Simulator:** Jeder Schüler kann am eigenen PC/Tablet tüfteln und das Verhalten vorab testen.
+   - **Live am Roboter:** Über die "Grüne Flagge" läuft der Code direkt auf dem echten Alpha Mini!
+3. **Unterrichtsmaterial:**
+   - Fertige Aufgaben und Kopiervorlagen findest du in der Datei:
+     👉 `UNTERRICHTSMATERIAL_5_KLASSE.md`
+
+---
+
 ## ❓ Häufige Fragen & Problemlösung
 
 - **Muss der Roboter immer am PC angeschlossen bleiben?**
