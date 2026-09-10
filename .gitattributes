@@ -1,0 +1,6 @@
+# Auto-detect text files and normalize line endings
+* text=auto
+
+# Batch and command scripts MUST always use CRLF on Windows cmd.exe
+*.bat text eol=crlf
+*.cmd text eol=crlf

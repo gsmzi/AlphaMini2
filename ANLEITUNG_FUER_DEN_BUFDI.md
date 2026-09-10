@@ -13,7 +13,10 @@ Offiziell verlangt der Hersteller bei der Ersteinrichtung über die Smartphone-A
 
 ## 📦 Was ist in diesem Ordner bereits vorbereitet?
 
-1. **Keine Software-Installation nötig:**
+> ⚠️ **WICHTIG VOR DEM START: ZIP-Datei zuerst entpacken!**  
+> Falls du diesen Ordner als `.zip`-Datei erhalten oder heruntergeladen hast: Mache bitte zuerst einen **Rechtsklick auf die ZIP-Datei** und wähle **"Alle extrahieren..."**. Starte die `.bat`-Dateien **nicht** direkt innerhalb der ZIP-Datei, da Windows sonst die Unterordner (wie `tools`) nicht findet!
+
+1. **Keine Software-Installation nötig (für Bildschirmübertragung):**
    * Das Bildschirmübertragungs-Tool **`scrcpy`** und die Android-Schnittstelle **`adb`** liegen fertig eingerichtet im Ordner `tools\scrcpy\`.
 2. **Die fertige Steuerungs-App liegt bereit:**
    * Die Datei **`sdkdemo-debug.apk`** liegt bereits fertig kompiliert im Hauptordner (enthält die Offline-Spracherkennung für Deutsch & Englisch, Roboter-Mimik und Tanz-/Bewegungssteuerungen).
@@ -96,16 +99,21 @@ Da die Installationsdatei `sdkdemo-debug.apk` bereits im Ordner liegt, geht die 
 
 Für den Informatikunterricht oder die Roboter-AG in der 5. Klasse gibt es die blockbasierte Programmierumgebung **AlphaBlock** (funktioniert wie Scratch 3.0):
 
-1. **Starten:** Doppelklick auf:
+1. **Voraussetzung (einmalig):**
+   - Auf dem PC muss **Python 3** vorhanden sein (Standard unter Windows, kostenlos auf [python.org](https://www.python.org/downloads/)).
+   - **WICHTIG bei der Installation:** Beim Starten des Python-Installers ganz unten den Haken setzen bei:  
+     `[X] Add python.exe to PATH` *(oder "Python zum Pfad hinzufügen")*.
+   - *Schnellinstallation per Windows-Kommandozeile:* `winget install Python.Python.3.12`
+2. **Starten:** Doppelklick auf:
    ```
    3_SCRATCH_BLOCKLY_STARTEN.bat
    ```
-2. **Im Browser programmieren:**
-   - Der Webbrowser öffnet sich sofort automatisch.
+3. **Im Browser programmieren:**
+   - Der Webbrowser öffnet sich sofort automatisch (`http://localhost:8080`).
    - 100% auf Deutsch mit bunten Blöcken für Sprache, Mimik, Tanzen, Lichter und Schleifen.
    - **Mit virtuellem Simulator:** Jeder Schüler kann am eigenen PC/Tablet tüfteln und das Verhalten vorab testen.
    - **Live am Roboter:** Über die "Grüne Flagge" läuft der Code direkt auf dem echten Alpha Mini!
-3. **Unterrichtsmaterial:**
+4. **Unterrichtsmaterial:**
    - Fertige Aufgaben und Kopiervorlagen findest du in der Datei:
      👉 `UNTERRICHTSMATERIAL_5_KLASSE.md`
 
@@ -113,6 +121,13 @@ Für den Informatikunterricht oder die Roboter-AG in der 5. Klasse gibt es die b
 
 ## ❓ Häufige Fragen & Problemlösung
 
+- **`1_BILDSCHIRM_STARTEN.bat` sagt "scrcpy nicht gefunden" oder "Befehl falsch":**
+  1. Wurde die ZIP-Datei entpackt? Falls nicht: Rechtsklick auf die ZIP &rarr; *"Alle extrahieren..."*.
+  2. Die Datei muss aus dem entpackten Hauptordner gestartet werden, damit der Unterordner `tools\scrcpy\` gefunden werden kann.
+- **`3_SCRATCH_BLOCKLY_STARTEN.bat` findet Python nicht, obwohl es installiert wurde:**
+  1. Der Python-Installer wurde vermutlich ohne den Haken *"Add python.exe to PATH"* ausgeführt.
+  2. Lösung: Lade die Installationsdatei von python.org erneut herunter bzw. öffne sie, wähle **"Modify"** und aktiviere den Haken `[X] Add python.exe to PATH`.
+  3. Starte das Skript danach erneut (das Skript sucht automatisch in `py -3`, PATH, AppData, Program Files und der Windows-Registry).
 - **Muss der Roboter immer am PC angeschlossen bleiben?**
   Nein! Sobald Sprache, WLAN und die App V3 eingerichtet sind, läuft alles eigenständig auf dem Roboter. Der PC wird nur für die Ersteinrichtung per USB gebraucht.
 - **Warum höre ich keinen Ton aus dem PC?**

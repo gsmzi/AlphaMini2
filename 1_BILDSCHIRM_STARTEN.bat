@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 chcp 65001 >nul
 title Alpha Mini 2 - Bildschirmsteuerung (scrcpy)
 echo ========================================================
@@ -10,15 +11,28 @@ set "SCRIPT_DIR=%~dp0"
 set "ADB_PATH=%SCRIPT_DIR%tools\scrcpy\adb.exe"
 set "SCRCPY_PATH=%SCRIPT_DIR%tools\scrcpy\scrcpy.exe"
 
+REM Pruefe, ob das Skript in einer unentpackten ZIP ausgefuehrt wird oder tools fehlt
 if not exist "%SCRCPY_PATH%" (
-    echo [FEHLER] scrcpy wurde nicht im Ordner tools\scrcpy gefunden!
-    echo Bitte stelle sicher, dass der Ordner 'tools' vorhanden ist.
+    echo [FEHLER] scrcpy.exe wurde nicht im Ordner tools\scrcpy gefunden!
+    echo.
+    echo ============================================================================
+    echo HINWEIS: Hast du die ZIP-Datei vor dem Start ENTPACKT?
+    echo.
+    echo Wenn du die Batch-Datei direkt in der ZIP-Datei oeffnest, kann Windows
+    echo die benoetigten Hilfsprogramme nicht laden.
+    echo.
+    echo LOESUNG:
+    echo 1. Klicke mit der RECHTEN Maustaste auf die ZIP-Datei.
+    echo 2. Waehle "Alle extrahieren..." und bestaetige mit "Extrahieren".
+    echo 3. Oeffne den entpackten Ordner und starte die Datei dort erneut!
+    echo ============================================================================
+    echo.
     pause
     exit /b 1
 )
 
 echo [1/2] Suche nach verbundenem Alpha Mini Roboter...
-echo       (Bitte Roboter per USB anschließen und einschalten)
+echo       (Bitte Roboter per USB anschliessen und einschalten)
 echo.
 
 :CHECK_DEVICE

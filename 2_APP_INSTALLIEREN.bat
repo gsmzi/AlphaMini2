@@ -1,4 +1,5 @@
 @echo off
+setlocal EnableDelayedExpansion
 chcp 65001 >nul
 title Alpha Mini 2 - App Installation
 echo ========================================================
@@ -9,8 +10,22 @@ echo.
 set "SCRIPT_DIR=%~dp0"
 set "ADB_PATH=%SCRIPT_DIR%tools\scrcpy\adb.exe"
 
+REM Pruefe, ob das Skript in einer unentpackten ZIP ausgefuehrt wird oder tools fehlt
 if not exist "%ADB_PATH%" (
     echo [FEHLER] adb.exe wurde nicht in tools\scrcpy gefunden!
+    echo.
+    echo ============================================================================
+    echo HINWEIS: Hast du die ZIP-Datei vor dem Start ENTPACKT?
+    echo.
+    echo Wenn du die Batch-Datei direkt in der ZIP-Datei oeffnest, kann Windows
+    echo die benoetigten Hilfsprogramme nicht laden.
+    echo.
+    echo LOESUNG:
+    echo 1. Klicke mit der RECHTEN Maustaste auf die ZIP-Datei.
+    echo 2. Waehle "Alle extrahieren..." und bestaetige mit "Extrahieren".
+    echo 3. Oeffne den entpackten Ordner und starte die Datei dort erneut!
+    echo ============================================================================
+    echo.
     pause
     exit /b 1
 )
@@ -47,8 +62,8 @@ if "%APK_FILE%"=="" (
     echo [!] Keine APK-Datei gefunden!
     echo.
     echo So geht es:
-    echo 1. Fordere vom Verkaeufer (Terra Robotics) die fertig gebaute Datei an:
-    echo    z. B. "sdkdemo-debug.apk"
+    echo 1. Lade die Datei "sdkdemo-debug.apk" herunter von:
+    echo    https://github.com/gsmzi/AlphaMini2/releases/tag/latest
     echo 2. Kopiere die .apk-Datei einfach hier in diesen Hauptordner.
     echo 3. Starte dieses Skript (2_APP_INSTALLIEREN.bat) erneut!
     echo.
