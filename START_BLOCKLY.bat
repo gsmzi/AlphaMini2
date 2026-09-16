@@ -12,24 +12,7 @@ set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 
 REM Pruefe, ob das Skript in einer unentpackten ZIP ausgefuehrt wird
-if not exist "%SCRIPT_DIR%alphablock_server.py" (
-    echo [FEHLER] alphablock_server.py wurde nicht gefunden!
-    echo.
-    echo ============================================================================
-    echo HINWEIS: Hast du die ZIP-Datei vor dem Start ENTPACKT?
-    echo.
-    echo Wenn du die Batch-Datei direkt in der ZIP-Datei oeffnest, kann Windows
-    echo die benoetigten Programmdateien nicht finden.
-    echo.
-    echo LOESUNG:
-    echo 1. Klicke mit der RECHTEN Maustaste auf die ZIP-Datei.
-    echo 2. Waehle "Alle extrahieren..." und bestaetige mit "Extrahieren".
-    echo 3. Oeffne den entpackten Ordner und starte die Datei dort erneut!
-    echo ============================================================================
-    echo.
-    pause
-    exit /b 1
-)
+if not exist "%SCRIPT_DIR%alphablock_server.py" goto ERR_NO_SERVER
 
 echo [1/3] Suche nach Python 3 auf diesem PC...
 
@@ -91,30 +74,29 @@ for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "(Get-ItemProp
 )
 if defined PYTHON_CMD goto PYTHON_FOUND
 
-:PYTHON_FOUND
-if not defined PYTHON_CMD (
-    echo.
-    echo ============================================================================
-    echo [FEHLER] Python 3 wurde auf diesem Computer nicht gefunden!
-    echo ============================================================================
-    echo.
-    echo Fuer die Scratch-Programmierung wird Python 3 benoetigt.
-    echo.
-    echo Falls du Python bereits heruntergeladen hast:
-    echo 1. Starte die heruntergeladene Python-Installationsdatei erneut.
-    echo 2. Waehle "Modify" (Aendern) oder deinstalliere und installiere neu.
-    echo 3. WICHTIG: Setze ganz unten den Haken bei:
-    echo    [X] "Add python.exe to PATH"  (oder: "Python zum Pfad hinzufuegen")
-    echo 4. Klicke auf "Install Now" und starte danach diese Datei erneut!
-    echo.
-    echo Schnelle Alternative (Windows Terminal / CMD):
-    echo    winget install Python.Python.3.12
-    echo ============================================================================
-    echo.
-    pause
-    exit /b 1
-)
+:PYTHON_NOT_FOUND
+echo.
+echo ============================================================================
+echo [FEHLER] Python 3 wurde auf diesem Computer nicht gefunden!
+echo ============================================================================
+echo.
+echo Fuer die Scratch-Programmierung wird Python 3 benoetigt.
+echo.
+echo Falls du Python bereits heruntergeladen hast:
+echo 1. Starte die heruntergeladene Python-Installationsdatei erneut.
+echo 2. Waehle Modify oder deinstalliere und installiere neu.
+echo 3. WICHTIG: Setze ganz unten den Haken bei:
+echo    [X] Add python.exe to PATH
+echo 4. Klicke auf Install Now und starte danach diese Datei erneut!
+echo.
+echo Schnelle Alternative ueber die Windows-Befehlszeile:
+echo    winget install Python.Python.3.12
+echo ============================================================================
+echo.
+pause
+exit /b 1
 
+:PYTHON_FOUND
 echo [OK] Python gefunden: !PYTHON_CMD!
 echo.
 echo [2/3] Starte AlphaBlock Schul-Server...
@@ -140,3 +122,22 @@ echo ========================================================
 echo.
 echo Dieses Fenster kann minimiert oder geschlossen werden.
 pause
+exit /b 0
+
+:ERR_NO_SERVER
+echo [FEHLER] alphablock_server.py wurde nicht gefunden!
+echo.
+echo ============================================================================
+echo HINWEIS: Hast du die ZIP-Datei vor dem Start ENTPACKT?
+echo.
+echo Wenn du die Batch-Datei direkt in der ZIP-Datei oeffnest, kann Windows
+echo die benoetigten Programmdateien nicht finden.
+echo.
+echo LOESUNG:
+echo 1. Klicke mit der RECHTEN Maustaste auf die ZIP-Datei.
+echo 2. Waehle "Alle extrahieren..." und bestaetige mit "Extrahieren".
+echo 3. Oeffne den entpackten Ordner und starte die Datei dort erneut!
+echo ============================================================================
+echo.
+pause
+exit /b 1

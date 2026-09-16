@@ -11,34 +11,11 @@ set "SCRIPT_DIR=%~dp0"
 set "ADB_PATH=%SCRIPT_DIR%tools\scrcpy\adb.exe"
 
 REM Pruefe, ob das Skript in einer unentpackten ZIP ausgefuehrt wird oder tools fehlt
-if not exist "%ADB_PATH%" (
-    echo [FEHLER] adb.exe wurde nicht in tools\scrcpy gefunden!
-    echo.
-    echo ============================================================================
-    echo HINWEIS: Hast du die ZIP-Datei vor dem Start ENTPACKT?
-    echo.
-    echo Wenn du die Batch-Datei direkt in der ZIP-Datei oeffnest, kann Windows
-    echo die benoetigten Hilfsprogramme nicht laden.
-    echo.
-    echo LOESUNG:
-    echo 1. Klicke mit der RECHTEN Maustaste auf die ZIP-Datei.
-    echo 2. Waehle "Alle extrahieren..." und bestaetige mit "Extrahieren".
-    echo 3. Oeffne den entpackten Ordner und starte die Datei dort erneut!
-    echo ============================================================================
-    echo.
-    pause
-    exit /b 1
-)
+if not exist "%ADB_PATH%" goto ERR_NO_ADB
 
 REM Pruefe Geraeteverbindung
 "%ADB_PATH%" devices | findstr /R /C:"[a-zA-Z0-9].*device$" >nul 2>&1
-if errorlevel 1 (
-    echo [!] Kein Roboter ueber USB erkannt.
-    echo Bitte schliesse den Roboter per USB an und schalte ihn ein.
-    echo.
-    pause
-    exit /b 1
-)
+if errorlevel 1 goto ERR_NO_ROBOT
 
 echo [1/3] Suche nach APK-Installationsdatei...
 
@@ -57,33 +34,13 @@ if exist "%SCRIPT_DIR%SDK\sdkdemo\build\outputs\apk\debug\sdkdemo-debug.apk" (
 )
 
 :FOUND_APK
-if "%APK_FILE%"=="" (
-    echo.
-    echo [!] Keine APK-Datei gefunden!
-    echo.
-    echo So geht es:
-    echo 1. Lade die Datei "sdkdemo-debug.apk" herunter von:
-    echo    https://github.com/gsmzi/AlphaMini2/releases/tag/latest
-    echo 2. Kopiere die .apk-Datei einfach hier in diesen Hauptordner.
-    echo 3. Starte dieses Skript (2_APP_INSTALLIEREN.bat) erneut!
-    echo.
-    echo TIPP: Du kannst jede .apk-Datei auch einfach mit gedrueckter Maustaste
-    echo direkt in das geoeffnete scrcpy-Bildschirmfenster ziehen (Drag and Drop)!
-    echo.
-    pause
-    exit /b 1
-)
+if "%APK_FILE%"=="" goto ERR_NO_APK
 
 echo [OK] Gefunden: %APK_FILE%
 echo.
 echo [2/3] Installiere App auf dem Roboter...
 "%ADB_PATH%" install -r "%APK_FILE%"
-if errorlevel 1 (
-    echo.
-    echo [FEHLER] Installation fehlgeschlagen!
-    pause
-    exit /b 1
-)
+if errorlevel 1 goto ERR_INSTALL_FAILED
 
 echo [OK] App erfolgreich installiert!
 echo.
@@ -96,3 +53,51 @@ echo Fertig! Die App ist auf dem Roboter installiert.
 echo Du kannst sie nun auf dem Display des Roboters antippen!
 echo ========================================================
 pause
+exit /b 0
+
+:ERR_NO_ADB
+echo [FEHLER] adb.exe wurde nicht in tools\scrcpy gefunden!
+echo.
+echo ============================================================================
+echo HINWEIS: Hast du die ZIP-Datei vor dem Start ENTPACKT?
+echo.
+echo Wenn du die Batch-Datei direkt in der ZIP-Datei oeffnest, kann Windows
+echo die benoetigten Hilfsprogramme nicht laden.
+echo.
+echo LOESUNG:
+echo 1. Klicke mit der RECHTEN Maustaste auf die ZIP-Datei.
+echo 2. Waehle "Alle extrahieren..." und bestaetige mit "Extrahieren".
+echo 3. Oeffne den entpackten Ordner und starte die Datei dort erneut!
+echo ============================================================================
+echo.
+pause
+exit /b 1
+
+:ERR_NO_ROBOT
+echo [!] Kein Roboter ueber USB erkannt.
+echo Bitte schliesse den Roboter per USB an und schalte ihn ein.
+echo.
+pause
+exit /b 1
+
+:ERR_NO_APK
+echo.
+echo [!] Keine APK-Datei gefunden!
+echo.
+echo So geht es:
+echo 1. Lade die Datei "sdkdemo-debug.apk" herunter von:
+echo    https://github.com/gsmzi/AlphaMini2/releases/tag/latest
+echo 2. Kopiere die .apk-Datei einfach hier in diesen Hauptordner.
+echo 3. Starte dieses Skript erneut!
+echo.
+echo TIPP: Du kannst jede .apk-Datei auch einfach per Drag and Drop
+echo direkt in das geoeffnete scrcpy-Bildschirmfenster ziehen!
+echo.
+pause
+exit /b 1
+
+:ERR_INSTALL_FAILED
+echo.
+echo [FEHLER] Installation fehlgeschlagen!
+pause
+exit /b 1
