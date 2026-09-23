@@ -7,12 +7,24 @@ echo       ALPHA MINI 2 - BILDSCHIRM-STEUERUNG
 echo ========================================================
 echo.
 
-set "SCRIPT_DIR=%~dp0"
+REM Automatische Unterstuetzung fuer Netzwerkpfade (UNC wie \\Server\Freigabe)
+pushd "%~dp0"
+set "SCRIPT_DIR=%CD%\"
+
 set "ADB_PATH=%SCRIPT_DIR%tools\scrcpy\adb.exe"
 set "SCRCPY_PATH=%SCRIPT_DIR%tools\scrcpy\scrcpy.exe"
+set "SCRCPY_DIR=%SCRIPT_DIR%tools\scrcpy"
 
 REM Pruefe, ob das Skript in einer unentpackten ZIP ausgefuehrt wird oder tools fehlt
 if not exist "%SCRCPY_PATH%" goto ERR_NO_SCRCPY
+
+REM Kopiere scrcpy-server ins lokale Temp-Verzeichnis, damit es auch auf Schul-Netzlaufwerken (UNC) zuverlaessig laeuft
+if exist "%SCRCPY_DIR%\scrcpy-server" (
+    copy /y "%SCRCPY_DIR%\scrcpy-server" "%TEMP%\scrcpy-server" >nul 2>&1
+    if exist "%TEMP%\scrcpy-server" (
+        set "SCRCPY_SERVER_PATH=%TEMP%\scrcpy-server"
+    )
+)
 
 echo [1/2] Suche nach verbundenem Alpha Mini Roboter...
 echo       Bitte Roboter per USB anschliessen und einschalten.
@@ -28,7 +40,7 @@ echo [2/2] Starte Bildschirmuebertragung...
 echo       Tipp: Im geoeffneten Fenster kannst du den Roboter direkt mit der Maus bedienen!
 echo.
 
-start "" "%SCRCPY_PATH%" --no-audio
+start "" /D "%SCRCPY_DIR%" "%SCRCPY_PATH%" --no-audio
 
 echo ========================================================
 echo Das Roboter-Display sollte jetzt auf deinem Monitor sein!
@@ -41,6 +53,7 @@ echo 4. Mit dem heimischen WLAN verbinden
 echo ========================================================
 echo.
 echo Dieses Fenster kann geschlossen werden.
+popd
 pause
 exit /b 0
 
@@ -58,6 +71,7 @@ echo Suche erneut...
 goto CHECK_DEVICE
 
 :ERR_NO_SCRCPY
+popd
 echo [FEHLER] scrcpy.exe wurde nicht im Ordner tools\scrcpy gefunden!
 echo.
 echo ============================================================================

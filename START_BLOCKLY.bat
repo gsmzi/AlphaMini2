@@ -8,7 +8,9 @@ echo               Fuer die 5. Klasse
 echo ========================================================
 echo.
 
-set "SCRIPT_DIR=%~dp0"
+REM Automatische Unterstuetzung fuer Netzwerkpfade (UNC wie \\Server\Freigabe)
+pushd "%~dp0"
+set "SCRIPT_DIR=%CD%\"
 cd /d "%SCRIPT_DIR%"
 
 REM Pruefe, ob das Skript in einer unentpackten ZIP ausgefuehrt wird
@@ -121,10 +123,12 @@ echo  - Kein Roboter angeschlossen?   -^> Bildschirm-Simulator laeuft!
 echo ========================================================
 echo.
 echo Dieses Fenster kann minimiert oder geschlossen werden.
+popd
 pause
 exit /b 0
 
 :ERR_NO_SERVER
+popd
 echo [FEHLER] alphablock_server.py wurde nicht gefunden!
 echo.
 echo ============================================================================

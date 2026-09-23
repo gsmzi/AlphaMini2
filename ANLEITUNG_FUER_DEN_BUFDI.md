@@ -14,7 +14,9 @@ Offiziell verlangt der Hersteller bei der Ersteinrichtung über die Smartphone-A
 ## 📦 Was ist in diesem Ordner bereits vorbereitet?
 
 > ⚠️ **WICHTIG VOR DEM START: ZIP-Datei zuerst entpacken!**  
-> Falls du diesen Ordner als `.zip`-Datei erhalten oder heruntergeladen hast: Mache bitte zuerst einen **Rechtsklick auf die ZIP-Datei** und wähle **"Alle extrahieren..."**. Starte die `.bat`-Dateien **nicht** direkt innerhalb der ZIP-Datei, da Windows sonst die Unterordner (wie `tools`) nicht findet!
+> Falls du diesen Ordner als `.zip`-Datei erhalten oder heruntergeladen hast: Mache bitte zuerst einen **Rechtsklick auf die ZIP-Datei** und wähle **"Alle extrahieren..."**. Starte die `.bat`-Dateien **nicht** direkt innerhalb der ZIP-Datei, da Windows sonst die Unterordner (wie `tools`) nicht findet!  
+>  
+> 💡 **Tipp für Schul-PCs / Netzlaufwerke:** Wenn du an einem Schul-PC sitzt, dessen Benutzerordner auf einem Schul-Server liegen (`\\Server\...`), kopiere den entpackten Ordner am besten direkt auf die lokale Festplatte (z. B. nach `C:\AlphaMini`). Die Skripte fangen Netzlaufwerke zwar automatisch ab, aber lokal läuft es am schnellsten und stabilsten!
 
 1. **Keine Software-Installation nötig (für Bildschirmübertragung):**
    * Das Bildschirmübertragungs-Tool **`scrcpy`** und die Android-Schnittstelle **`adb`** liegen fertig eingerichtet im Ordner `tools\scrcpy\`.

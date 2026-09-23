@@ -7,7 +7,9 @@ echo       ALPHA MINI 2 - APP INSTALLATION
 echo ========================================================
 echo.
 
-set "SCRIPT_DIR=%~dp0"
+REM Automatische Unterstuetzung fuer Netzwerkpfade (UNC wie \\Server\Freigabe)
+pushd "%~dp0"
+set "SCRIPT_DIR=%CD%\"
 set "ADB_PATH=%SCRIPT_DIR%tools\scrcpy\adb.exe"
 
 REM Pruefe, ob das Skript in einer unentpackten ZIP ausgefuehrt wird oder tools fehlt
@@ -39,8 +41,19 @@ if "%APK_FILE%"=="" goto ERR_NO_APK
 echo [OK] Gefunden: %APK_FILE%
 echo.
 echo [2/3] Installiere App auf dem Roboter...
-"%ADB_PATH%" install -r "%APK_FILE%"
-if errorlevel 1 goto ERR_INSTALL_FAILED
+
+set "TARGET_APK=%APK_FILE%"
+if "%APK_FILE:~0,2%"=="\\" (
+    echo Kopiere temporaer fuer fehlerfreie Netzwerk-Installation...
+    copy /y "%APK_FILE%" "%TEMP%\sdkdemo-debug.apk" >nul 2>&1
+    if exist "%TEMP%\sdkdemo-debug.apk" set "TARGET_APK=%TEMP%\sdkdemo-debug.apk"
+)
+
+"%ADB_PATH%" install -r "%TARGET_APK%"
+set "INSTALL_STATUS=%ERRORLEVEL%"
+if exist "%TEMP%\sdkdemo-debug.apk" del "%TEMP%\sdkdemo-debug.apk" >nul 2>&1
+
+if not "%INSTALL_STATUS%"=="0" goto ERR_INSTALL_FAILED
 
 echo [OK] App erfolgreich installiert!
 echo.
@@ -52,10 +65,12 @@ echo ========================================================
 echo Fertig! Die App ist auf dem Roboter installiert.
 echo Du kannst sie nun auf dem Display des Roboters antippen!
 echo ========================================================
+popd
 pause
 exit /b 0
 
 :ERR_NO_ADB
+popd
 echo [FEHLER] adb.exe wurde nicht in tools\scrcpy gefunden!
 echo.
 echo ============================================================================
@@ -74,6 +89,7 @@ pause
 exit /b 1
 
 :ERR_NO_ROBOT
+popd
 echo [!] Kein Roboter ueber USB erkannt.
 echo Bitte schliesse den Roboter per USB an und schalte ihn ein.
 echo.
@@ -81,6 +97,7 @@ pause
 exit /b 1
 
 :ERR_NO_APK
+popd
 echo.
 echo [!] Keine APK-Datei gefunden!
 echo.
@@ -97,6 +114,7 @@ pause
 exit /b 1
 
 :ERR_INSTALL_FAILED
+popd
 echo.
 echo [FEHLER] Installation fehlgeschlagen!
 pause
