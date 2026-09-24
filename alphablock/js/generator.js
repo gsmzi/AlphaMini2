@@ -91,6 +91,32 @@ registerGenerator('alpha_sound',
     }
 );
 
+registerGenerator('alpha_walk',
+    (block) => {
+        const dir = block.getFieldValue('DIRECTION') || 'forward';
+        const steps = Number(block.getFieldValue('STEPS')) || 2;
+        return `await runner.highlightBlock('${block.id}');\nawait runner.walk('${dir}', ${steps});\n`;
+    },
+    (block) => {
+        const dir = block.getFieldValue('DIRECTION') || 'forward';
+        const steps = Number(block.getFieldValue('STEPS')) || 2;
+        return `    robot.walk_${dir}(${steps})\n`;
+    }
+);
+
+registerGenerator('alpha_turn',
+    (block) => {
+        const dir = block.getFieldValue('DIRECTION') || 'left';
+        const steps = Number(block.getFieldValue('STEPS')) || 2;
+        return `await runner.highlightBlock('${block.id}');\nawait runner.turn('${dir}', ${steps});\n`;
+    },
+    (block) => {
+        const dir = block.getFieldValue('DIRECTION') || 'left';
+        const steps = Number(block.getFieldValue('STEPS')) || 2;
+        return `    robot.turn_${dir}(${steps})\n`;
+    }
+);
+
 registerGenerator('alpha_action',
     (block) => {
         const action = block.getFieldValue('ACTION') || '010';

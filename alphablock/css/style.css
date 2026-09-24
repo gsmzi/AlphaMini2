@@ -320,91 +320,137 @@ body.program-running .btn-flag {
     width: 0;
 }
 
+/* Roboter-Container & Bühne */
+.robot-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+    margin-top: 20px;
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.stage-floor {
+    position: absolute;
+    bottom: 38px;
+    left: 16px;
+    right: 16px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #CBD5E1 15%, #CBD5E1 85%, transparent);
+    z-index: 1;
+}
+
 /* Roboter-Körper Aufbau */
 .robot-body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-top: 40px;
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    transform-origin: bottom center;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* Kopf */
 .robot-head {
-    width: 170px;
-    height: 130px;
-    background: #FFFFFF;
-    border: 4px solid #334155;
-    border-radius: 36px 36px 28px 28px;
+    width: 154px;
+    height: 118px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 70%, #E2E8F0 100%);
+    border: 3.5px solid #1E293B;
+    border-radius: 44px 44px 34px 34px;
     position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08), inset 0 2px 4px rgba(255, 255, 255, 0.9);
     transition: transform 0.3s;
+    z-index: 5;
 }
 
-/* Ohren mit LED-Ringen */
+/* Stirn-Sensor / Kamera */
+.head-sensor {
+    position: absolute;
+    top: 8px;
+    width: 7px;
+    height: 7px;
+    background: #00B4D8;
+    border-radius: 50%;
+    box-shadow: 0 0 6px #00B4D8;
+}
+
+/* Ohren mit rundem LED-Ring */
 .ear {
     width: 24px;
-    height: 48px;
+    height: 44px;
     background: #F1F5F9;
-    border: 3px solid #334155;
+    border: 3px solid #1E293B;
     border-radius: 12px;
     position: absolute;
-    top: 36px;
+    top: 34px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
-.ear.left { left: -16px; }
-.ear.right { right: -16px; }
+.ear.left { left: -15px; border-radius: 12px 4px 4px 12px; }
+.ear.right { right: -15px; border-radius: 4px 12px 12px 4px; }
+
+.ear-cap {
+    width: 18px;
+    height: 28px;
+    border-radius: 8px;
+    background: #E2E8F0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 
 .led-indicator {
     width: 12px;
-    height: 24px;
-    border-radius: 6px;
+    height: 12px;
+    border-radius: 50%;
     background-color: #00FF66;
-    box-shadow: 0 0 12px #00FF66;
+    box-shadow: 0 0 10px #00FF66;
     transition: background-color 0.3s, box-shadow 0.3s;
 }
 
-/* LCD Augen Display */
+/* LCD Visier / Bildschirm */
 .screen-display {
-    width: 132px;
-    height: 84px;
-    background: #0F172A;
+    width: 116px;
+    height: 72px;
+    background: radial-gradient(ellipse at center, #111E38 0%, #090E1A 100%);
     border-radius: 20px;
     display: flex;
     align-items: center;
     justify-content: space-around;
-    padding: 0 12px;
+    padding: 0 10px;
     position: relative;
-    border: 2px solid #1E293B;
+    border: 2.5px solid #1E293B;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8), 0 0 10px rgba(0, 195, 230, 0.12);
 }
 
 /* Augen Grundform */
 .eye {
-    width: 38px;
-    height: 48px;
+    width: 32px;
+    height: 44px;
     background: #00C3E6;
-    border-radius: 50%;
-    box-shadow: 0 0 16px #00C3E6;
+    border-radius: 14px;
+    box-shadow: 0 0 16px #00C3E6, inset 0 0 6px rgba(255, 255, 255, 0.6);
     transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     position: relative;
 }
 
 /* Augen-Ausdrücke */
 .eye.eye-normal {
-    border-radius: 50%;
+    border-radius: 14px;
 }
 .eye.eye-happy {
-    height: 24px;
-    border-radius: 40px 40px 0 0;
+    height: 22px;
+    border-radius: 36px 36px 0 0;
     transform: translateY(6px);
 }
 .eye.eye-excited {
-    height: 52px;
+    height: 48px;
     background: #59C059;
     box-shadow: 0 0 20px #59C059;
 }
@@ -414,15 +460,15 @@ body.program-running .btn-flag {
     transform: translateY(12px);
 }
 .eye.eye-surprised {
-    width: 44px;
-    height: 54px;
+    width: 38px;
+    height: 48px;
     border-radius: 50%;
     background: #FFD166;
     box-shadow: 0 0 20px #FFD166;
 }
 .eye.eye-sad {
-    height: 30px;
-    border-radius: 0 0 40px 40px;
+    height: 26px;
+    border-radius: 0 0 36px 36px;
     background: #3B82F6;
     box-shadow: 0 0 14px #3B82F6;
     transform: translateY(10px);
@@ -431,11 +477,11 @@ body.program-running .btn-flag {
     background: #FF3366;
     box-shadow: 0 0 20px #FF3366;
     clip-path: path('M12 4.248c-3.148-5.402-12-3.825-12 2.944 0 4.661 5.571 9.427 12 15.808 6.43-6.381 12-11.147 12-15.808 0-6.792-8.875-8.306-12-2.944z');
-    transform: scale(1.6);
+    transform: scale(1.5);
 }
 .eye.eye-thinking {
     transform: translateY(-8px) translateX(6px);
-    height: 34px;
+    height: 30px;
 }
 .eye.eye-angry {
     clip-path: polygon(0 30%, 100% 0, 100% 100%, 0 100%);
@@ -443,133 +489,460 @@ body.program-running .btn-flag {
     box-shadow: 0 0 18px #EF4444;
 }
 .eye.eye-sleepy {
-    height: 14px;
+    height: 12px;
     border-radius: 6px;
     transform: translateY(10px);
 }
 
-/* Oberkörper & Brust-LED */
+/* Hals-Gelenk */
+.robot-neck {
+    width: 26px;
+    height: 8px;
+    background: #1E293B;
+    border-radius: 3px;
+    margin: -2px 0;
+    z-index: 4;
+}
+
+/* Oberkörper */
 .robot-torso {
-    width: 100px;
-    height: 70px;
-    background: #F8FAFC;
-    border: 4px solid #334155;
-    border-top: none;
-    border-radius: 0 0 24px 24px;
+    position: relative;
+    width: 96px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 4;
+}
+
+.chest-plate {
+    width: 76px;
+    height: 62px;
+    background: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 70%, #E2E8F0 100%);
+    border: 3px solid #1E293B;
+    border-radius: 14px 14px 18px 18px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), inset 0 2px 0 rgba(255, 255, 255, 0.9);
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chest-accent {
+    position: absolute;
+    top: 0;
+    left: 8px;
+    right: 8px;
+    height: 4px;
+    background: #00B4D8;
+    border-radius: 0 0 4px 4px;
 }
 
 .chest-circle {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: #E2E8F0;
-    border: 3px solid #334155;
+    border: 2.5px solid #1E293B;
     display: flex;
     align-items: center;
     justify-content: center;
 }
+
 .chest-led {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #00FF66;
-    box-shadow: 0 0 14px #00FF66;
+    box-shadow: 0 0 12px #00FF66;
     transition: background-color 0.3s, box-shadow 0.3s;
 }
 
-/* Arme */
+/* Gelenk-Arme */
 .arm {
-    width: 18px;
-    height: 48px;
-    background: #FFFFFF;
-    border: 3px solid #334155;
-    border-radius: 10px;
     position: absolute;
-    top: 4px;
+    top: 2px;
+    width: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     transform-origin: top center;
     transition: transform 0.3s;
+    z-index: 3;
 }
 .arm.left { left: -16px; }
 .arm.right { right: -16px; }
 
+.shoulder {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 2.5px solid #1E293B;
+    box-shadow: inset 0 0 0 2px #00B4D8;
+    z-index: 2;
+}
+
+.upper-arm {
+    width: 12px;
+    height: 16px;
+    background: #F1F5F9;
+    border: 2px solid #1E293B;
+    border-radius: 5px;
+    margin-top: -3px;
+}
+
+.forearm {
+    width: 14px;
+    height: 20px;
+    background: #FFFFFF;
+    border: 2.5px solid #1E293B;
+    border-radius: 6px;
+    margin-top: -2px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+}
+
+.hand {
+    position: absolute;
+    bottom: -6px;
+    width: 12px;
+    height: 8px;
+    background: #E2E8F0;
+    border: 2px solid #1E293B;
+    border-radius: 3px 3px 6px 6px;
+}
+
+/* Becken / Hüfte */
+.robot-pelvis {
+    width: 54px;
+    height: 10px;
+    background: #1E293B;
+    border-radius: 5px;
+    margin-top: -2px;
+    z-index: 3;
+}
+
+/* Beine & Füße */
+.robot-legs {
+    display: flex;
+    width: 78px;
+    justify-content: space-between;
+    position: relative;
+    z-index: 2;
+}
+
+.leg {
+    width: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform-origin: top center;
+    transition: transform 0.3s;
+}
+
+.thigh {
+    width: 17px;
+    height: 20px;
+    background: #FFFFFF;
+    border: 2.5px solid #1E293B;
+    border-radius: 5px;
+}
+
+.knee {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #00B4D8;
+    border: 2px solid #1E293B;
+    margin-top: -3px;
+    z-index: 1;
+}
+
+.shin {
+    width: 18px;
+    height: 22px;
+    background: #FFFFFF;
+    border: 2.5px solid #1E293B;
+    border-radius: 6px;
+    margin-top: -3px;
+}
+
+.foot {
+    width: 32px;
+    height: 12px;
+    background: #FFFFFF;
+    border: 2.5px solid #1E293B;
+    border-radius: 6px 12px 5px 5px;
+    margin-top: -1px;
+    position: relative;
+    box-shadow: inset 0 -2px 0 #00B4D8;
+}
+
+.leg.left .foot { border-radius: 12px 6px 5px 5px; }
+.leg.right .foot { border-radius: 6px 12px 5px 5px; }
+
+/* Bodenschatten */
+.robot-shadow {
+    width: 114px;
+    height: 14px;
+    background: radial-gradient(ellipse at center, rgba(30, 41, 59, 0.28) 0%, rgba(30, 41, 59, 0) 72%);
+    border-radius: 50%;
+    margin-top: 3px;
+    transition: all 0.3s ease;
+    z-index: 1;
+}
+
 /* Aktions-Plakette */
 .action-badge {
     position: absolute;
-    bottom: 14px;
-    background: rgba(30, 41, 59, 0.85);
+    bottom: 12px;
+    background: rgba(30, 41, 59, 0.88);
     color: #FFF;
     padding: 6px 14px;
     border-radius: 20px;
     font-size: 13px;
     font-weight: 700;
     opacity: 0;
-    transition: opacity 0.3s;
+    transition: opacity 0.3s, transform 0.3s;
     pointer-events: none;
+    z-index: 20;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
 /* ==========================================================================
-   ANIMATIONEN FÜR ROBOTER-BEWEGUNGEN
+   ANIMATIONEN: GEHEN, LAUFEN, DREHEN & AKTIONEN
    ========================================================================== */
+
+/* 🚶 VORWÄRTS LAUFEN */
+.anim-walk-forward .leg.left {
+    animation: walk-leg-cycle-left 0.7s infinite alternate ease-in-out;
+}
+.anim-walk-forward .leg.right {
+    animation: walk-leg-cycle-right 0.7s infinite alternate ease-in-out;
+}
+.anim-walk-forward .arm.left {
+    animation: walk-arm-cycle-left 0.7s infinite alternate ease-in-out;
+}
+.anim-walk-forward .arm.right {
+    animation: walk-arm-cycle-right 0.7s infinite alternate ease-in-out;
+}
+.anim-walk-forward .robot-body {
+    animation: walk-body-bob 0.35s infinite alternate ease-in-out;
+}
+.anim-walk-forward .robot-shadow {
+    animation: walk-shadow-bob 0.35s infinite alternate ease-in-out;
+}
+
+@keyframes walk-leg-cycle-left {
+    0%   { transform: rotate(-18deg) translateY(-2px); }
+    100% { transform: rotate(18deg) translateY(0); }
+}
+@keyframes walk-leg-cycle-right {
+    0%   { transform: rotate(18deg) translateY(0); }
+    100% { transform: rotate(-18deg) translateY(-2px); }
+}
+@keyframes walk-arm-cycle-left {
+    0%   { transform: rotate(26deg); }
+    100% { transform: rotate(-26deg); }
+}
+@keyframes walk-arm-cycle-right {
+    0%   { transform: rotate(-26deg); }
+    100% { transform: rotate(26deg); }
+}
+@keyframes walk-body-bob {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-4px); }
+}
+@keyframes walk-shadow-bob {
+    0%   { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(0.88); opacity: 0.55; }
+}
+
+/* 🚶 RÜCKWÄRTS LAUFEN */
+.anim-walk-backward .leg.left {
+    animation: walk-leg-cycle-right 0.7s infinite alternate ease-in-out;
+}
+.anim-walk-backward .leg.right {
+    animation: walk-leg-cycle-left 0.7s infinite alternate ease-in-out;
+}
+.anim-walk-backward .arm.left {
+    animation: walk-arm-cycle-right 0.7s infinite alternate ease-in-out;
+}
+.anim-walk-backward .arm.right {
+    animation: walk-arm-cycle-left 0.7s infinite alternate ease-in-out;
+}
+.anim-walk-backward .robot-body {
+    animation: walk-body-bob 0.35s infinite alternate ease-in-out;
+}
+
+/* 🔄 NACH LINKS DREHEN */
+.anim-turn-left .robot-body {
+    animation: turn-body-left 0.5s infinite alternate ease-in-out;
+}
+.anim-turn-left .leg.left {
+    animation: turn-step 0.25s infinite alternate;
+}
+.anim-turn-left .leg.right {
+    animation: turn-step 0.25s 0.12s infinite alternate;
+}
+@keyframes turn-body-left {
+    0%   { transform: rotate(-3deg) scaleX(0.96); }
+    100% { transform: rotate(-12deg) scaleX(0.92); }
+}
+@keyframes turn-step {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-5px); }
+}
+
+/* 🔄 NACH RECHTS DREHEN */
+.anim-turn-right .robot-body {
+    animation: turn-body-right 0.5s infinite alternate ease-in-out;
+}
+.anim-turn-right .leg.right {
+    animation: turn-step 0.25s infinite alternate;
+}
+.anim-turn-right .leg.left {
+    animation: turn-step 0.25s 0.12s infinite alternate;
+}
+@keyframes turn-body-right {
+    0%   { transform: rotate(3deg) scaleX(0.96); }
+    100% { transform: rotate(12deg) scaleX(0.92); }
+}
+
+/* 💪 LIEGESTÜTZE (PRESS UPS) */
+.anim-pressup .robot-body {
+    animation: pressup-body 1.2s infinite ease-in-out;
+    transform-origin: 50% 90%;
+}
+.anim-pressup .arm.left,
+.anim-pressup .arm.right {
+    animation: pressup-arms 1.2s infinite ease-in-out;
+}
+.anim-pressup .leg.left,
+.anim-pressup .leg.right {
+    transform: rotate(65deg) translateY(10px);
+}
+@keyframes pressup-body {
+    0%   { transform: translateY(30px) rotate(70deg); }
+    40%  { transform: translateY(38px) rotate(72deg); }
+    80%  { transform: translateY(30px) rotate(70deg); }
+    100% { transform: translateY(30px) rotate(70deg); }
+}
+@keyframes pressup-arms {
+    0%   { transform: rotate(-70deg); }
+    40%  { transform: rotate(-110deg); }
+    80%  { transform: rotate(-70deg); }
+    100% { transform: rotate(-70deg); }
+}
+
+/* 👋 WINKEN */
 .anim-wave .arm.right {
     animation: wave-arm 0.6s infinite alternate ease-in-out;
 }
 @keyframes wave-arm {
-    0% { transform: rotate(-30deg); }
-    100% { transform: rotate(-130deg); }
+    0%   { transform: rotate(-25deg); }
+    100% { transform: rotate(-135deg); }
 }
 
-.anim-dance {
-    animation: dance-body 0.8s infinite alternate ease-in-out;
+/* 💃 TANZEN */
+.anim-dance .robot-body {
+    animation: dance-body 0.75s infinite alternate ease-in-out;
+}
+.anim-dance .arm.left {
+    animation: dance-arm-left 0.75s infinite alternate ease-in-out;
+}
+.anim-dance .arm.right {
+    animation: dance-arm-right 0.75s infinite alternate ease-in-out;
+}
+.anim-dance .leg.left {
+    animation: dance-leg 0.75s infinite alternate ease-in-out;
+}
+.anim-dance .leg.right {
+    animation: dance-leg 0.75s 0.35s infinite alternate ease-in-out;
 }
 @keyframes dance-body {
-    0% { transform: translateY(0) rotate(-4deg); }
-    50% { transform: translateY(-8px) rotate(0deg); }
-    100% { transform: translateY(0) rotate(4deg); }
+    0%   { transform: translateY(0) rotate(-6deg); }
+    50%  { transform: translateY(-8px) rotate(0deg); }
+    100% { transform: translateY(0) rotate(6deg); }
+}
+@keyframes dance-arm-left {
+    0%   { transform: rotate(100deg); }
+    100% { transform: rotate(10deg); }
+}
+@keyframes dance-arm-right {
+    0%   { transform: rotate(-10deg); }
+    100% { transform: rotate(-100deg); }
+}
+@keyframes dance-leg {
+    0%   { transform: translateY(0); }
+    50%  { transform: translateY(-4px); }
+    100% { transform: translateY(0); }
 }
 
-.anim-arms-up .arm.left {
-    transform: rotate(140deg);
-}
-.anim-arms-up .arm.right {
-    transform: rotate(-140deg);
-}
+/* 🙌 ARME HOCH */
+.anim-arms-up .arm.left { transform: rotate(150deg); }
+.anim-arms-up .arm.right { transform: rotate(-150deg); }
 
-.anim-clap .arm.left {
-    animation: clap-left 0.4s infinite alternate;
-}
-.anim-clap .arm.right {
-    animation: clap-right 0.4s infinite alternate;
-}
+/* 👏 KLATSCHEN */
+.anim-clap .arm.left { animation: clap-left 0.35s infinite alternate; }
+.anim-clap .arm.right { animation: clap-right 0.35s infinite alternate; }
 @keyframes clap-left {
-    0% { transform: rotate(20deg); }
-    100% { transform: rotate(70deg); }
+    0%   { transform: rotate(20deg); }
+    100% { transform: rotate(75deg); }
 }
 @keyframes clap-right {
-    0% { transform: rotate(-20deg); }
-    100% { transform: rotate(-70deg); }
+    0%   { transform: rotate(-20deg); }
+    100% { transform: rotate(-75deg); }
 }
 
-.anim-bow {
-    transform: translateY(15px) rotate(15deg);
+/* 🙇 VERBEUGEN */
+.anim-bow .robot-body {
+    transform: translateY(12px) rotate(22deg);
 }
-.anim-squat {
-    transform: translateY(22px);
+
+/* 🧘 KNIEBEUGE */
+.anim-squat .robot-body {
+    transform: translateY(24px);
 }
+.anim-squat .leg.left,
+.anim-squat .leg.right {
+    transform: rotate(25deg);
+}
+.anim-squat .arm.left { transform: rotate(60deg); }
+.anim-squat .arm.right { transform: rotate(-60deg); }
+
+/* 🧍 AUFSTEHEN */
+.anim-standup .robot-body {
+    animation: standup-anim 0.8s ease-out;
+}
+@keyframes standup-anim {
+    0%   { transform: translateY(24px) scale(0.9); }
+    70%  { transform: translateY(-6px) scale(1.03); }
+    100% { transform: translateY(0) scale(1); }
+}
+
+/* 👍 NICKEN */
 .anim-nod .robot-head {
     animation: nod-head 0.4s 4 alternate;
 }
 @keyframes nod-head {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(8px); }
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(9px); }
+}
+
+/* 🤔 NACHDENKEN */
+.anim-think .arm.right {
+    transform: rotate(-110deg) translateY(-4px);
+}
+.anim-think .robot-head {
+    transform: rotate(8deg);
 }
 
 /* Kopf-Drehungen */
-.head-left { transform: rotate(-16deg); }
-.head-right { transform: rotate(16deg); }
+.head-left { transform: rotate(-18deg); }
+.head-right { transform: rotate(18deg); }
 .head-up { transform: translateY(-8px); }
 
 /* LED Effekte */
@@ -577,7 +950,7 @@ body.program-running .btn-flag {
     animation: led-blink-anim 0.3s infinite alternate;
 }
 @keyframes led-blink-anim {
-    0% { opacity: 1; }
+    0%   { opacity: 1; }
     100% { opacity: 0.1; }
 }
 
@@ -585,7 +958,7 @@ body.program-running .btn-flag {
     animation: led-breath-anim 1.5s infinite alternate ease-in-out;
 }
 @keyframes led-breath-anim {
-    0% { opacity: 0.2; transform: scale(0.85); }
+    0%   { opacity: 0.2; transform: scale(0.85); }
     100% { opacity: 1; transform: scale(1.1); }
 }
 

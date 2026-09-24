@@ -26,7 +26,9 @@ class AlphaSimulator {
     }
 
     initElements() {
+        this.robotContainer = document.getElementById('robotContainer');
         this.robotAvatar = document.getElementById('robotAvatar');
+        this.robotShadow = document.getElementById('robotShadow');
         this.leftEye = document.getElementById('simLeftEye');
         this.rightEye = document.getElementById('simRightEye');
         this.leftEarLed = document.getElementById('simLeftEar');
@@ -212,8 +214,74 @@ class AlphaSimulator {
     }
 
     // ==========================================
-    // 🕺 ROBOTER-AKTIONEN
+    // 🕺 ROBOTER-AKTIONEN & FORTBEWEGUNG
     // ==========================================
+    async walk(direction = 'forward', steps = 2) {
+        this.currentAction = `walk_${direction}`;
+        if (!this.robotAvatar) return;
+
+        this.stopAction();
+        const isForward = direction === 'forward';
+        const animClass = isForward ? 'anim-walk-forward' : 'anim-walk-backward';
+        this.robotAvatar.classList.add(animClass);
+
+        const dirText = isForward ? 'vorwärts' : 'rückwärts';
+        if (this.actionBadge) {
+            this.actionBadge.innerText = `🚶 Laufe ${steps} ${steps === 1 ? 'Schritt' : 'Schritte'} ${dirText}`;
+            this.actionBadge.style.opacity = '1';
+        }
+
+        const stepMs = 700;
+        for (let i = 0; i < steps; i++) {
+            this.playSound('step');
+            if (this.robotContainer) {
+                const shiftY = isForward ? -6 * Math.min(i + 1, 3) : 6 * Math.min(i + 1, 3);
+                const scaleVal = isForward ? 1 + 0.015 * Math.min(i + 1, 3) : 1 - 0.012 * Math.min(i + 1, 3);
+                this.robotContainer.style.transform = `translateY(${shiftY}px) scale(${scaleVal})`;
+            }
+            await new Promise(r => setTimeout(r, stepMs));
+        }
+
+        // Sanft wieder auf Standposition
+        await new Promise(r => setTimeout(r, 200));
+        if (this.robotContainer) {
+            this.robotContainer.style.transform = 'translateY(0) scale(1)';
+        }
+        this.stopAction();
+    }
+
+    async turn(direction = 'left', steps = 2) {
+        this.currentAction = `turn_${direction}`;
+        if (!this.robotAvatar) return;
+
+        this.stopAction();
+        const isLeft = direction === 'left';
+        const animClass = isLeft ? 'anim-turn-left' : 'anim-turn-right';
+        this.robotAvatar.classList.add(animClass);
+
+        const dirText = isLeft ? 'links' : 'rechts';
+        if (this.actionBadge) {
+            this.actionBadge.innerText = `🔄 Drehe ${steps} ${steps === 1 ? 'Schritt' : 'Schritte'} ${dirText}`;
+            this.actionBadge.style.opacity = '1';
+        }
+
+        const stepMs = 600;
+        for (let i = 0; i < steps; i++) {
+            this.playSound('step');
+            if (this.robotContainer) {
+                const rot = isLeft ? -8 : 8;
+                this.robotContainer.style.transform = `rotate(${rot}deg)`;
+            }
+            await new Promise(r => setTimeout(r, stepMs));
+        }
+
+        await new Promise(r => setTimeout(r, 200));
+        if (this.robotContainer) {
+            this.robotContainer.style.transform = 'rotate(0deg)';
+        }
+        this.stopAction();
+    }
+
     playAction(actionId) {
         this.currentAction = actionId;
         if (!this.robotAvatar) return;
@@ -224,6 +292,7 @@ class AlphaSimulator {
         const actionNames = {
             '010': { name: '👋 Winken', anim: 'anim-wave' },
             '014': { name: '💃 Tai Chi Tanz', anim: 'anim-dance' },
+            'pressup': { name: '💪 Liegestütze', anim: 'anim-pressup' },
             '017': { name: '🙌 Beide Arme hoch', anim: 'anim-arms-up' },
             '018': { name: '👏 Klatschen', anim: 'anim-clap' },
             '016': { name: '🙇 Verbeugen', anim: 'anim-bow' },
@@ -245,6 +314,9 @@ class AlphaSimulator {
     stopAction() {
         if (this.robotAvatar) {
             this.robotAvatar.className = 'robot-body';
+        }
+        if (this.robotContainer) {
+            this.robotContainer.style.transform = 'translateY(0) scale(1) rotate(0deg)';
         }
         if (this.actionBadge) {
             this.actionBadge.style.opacity = '0';
@@ -270,7 +342,20 @@ class AlphaSimulator {
             const ctx = this.getAudioContext();
             const now = ctx.currentTime;
 
-            if (sound === 'beep') {
+            if (sound === 'step') {
+                // Leiser sanfter Roboter-Schrittklang (Servo-Tap)
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(190, now);
+                osc.frequency.exponentialRampToValueAtTime(70, now + 0.08);
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.linearRampToValueAtTime(0.01, now + 0.09);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (sound === 'beep') {
                 // Niedliches Roboter-Piepsen
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();

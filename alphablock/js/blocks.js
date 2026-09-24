@@ -111,6 +111,41 @@ Blockly.Blocks['alpha_sound'] = {
 // 🕺 BEWEGUNG & AKTIONEN (MOTION)
 // ==========================================
 
+Blockly.Blocks['alpha_walk'] = {
+    init: function() {
+        this.appendDummyInput()
+            .appendField('🚶 laufe')
+            .appendField(new Blockly.FieldDropdown([
+                ['⬆️ vorwärts', 'forward'],
+                ['⬇️ rückwärts', 'backward']
+            ]), 'DIRECTION')
+            .appendField(new Blockly.FieldNumber(2, 1, 10, 1), 'STEPS')
+            .appendField('Schritte');
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(ALPHA_COLORS.MOTION);
+        this.setTooltip('Lässt den Roboter eine bestimmte Anzahl an Schritten vorwärts oder rückwärts laufen.');
+    }
+};
+
+Blockly.Blocks['alpha_turn'] = {
+    init: function() {
+        this.appendDummyInput()
+            .appendField('🔄 drehe')
+            .appendField(new Blockly.FieldDropdown([
+                ['⬅️ nach links', 'left'],
+                ['➡️ nach rechts', 'right']
+            ]), 'DIRECTION')
+            .appendField('um')
+            .appendField(new Blockly.FieldNumber(2, 1, 8, 1), 'STEPS')
+            .appendField('Schritte');
+        this.setPreviousStatement(true, null);
+        this.setNextStatement(true, null);
+        this.setColour(ALPHA_COLORS.MOTION);
+        this.setTooltip('Dreht den Roboter um eine Anzahl an Schritten nach links oder rechts.');
+    }
+};
+
 Blockly.Blocks['alpha_action'] = {
     init: function() {
         this.appendDummyInput()
@@ -118,6 +153,7 @@ Blockly.Blocks['alpha_action'] = {
             .appendField(new Blockly.FieldDropdown([
                 ['👋 Freundlich winken', '010'],
                 ['💃 Tanzen (Tai Chi Style)', '014'],
+                ['💪 Liegestütze machen', 'pressup'],
                 ['🙌 Beide Arme hoch!', '017'],
                 ['👏 In die Hände klatschen', '018'],
                 ['🙇 Höflich verbeugen', '016'],

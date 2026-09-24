@@ -161,8 +161,8 @@ const ALPHA_EXAMPLES = {
     // Beispiel 4: Roboter-Gymnastik
     // ------------------------------------------------------------------------
     'fitness': {
-        name: '🤸 Roboter-Gymnastik',
-        description: 'Morgen-Workout für die Klasse: Arme hoch, Kniebeuge, Ausstrecken und Klatschen.',
+        name: '🤸 Roboter-Gymnastik & Laufen',
+        description: 'Morgen-Workout für die Klasse: Vorwärts laufen, Liegestütze, Kniebeuge und Klatschen.',
         xml: `<xml xmlns="https://developers.google.com/blockly/xml">
   <block type="alpha_when_start" x="40" y="40">
     <next>
@@ -173,28 +173,40 @@ const ALPHA_EXAMPLES = {
             <field name="TEXT">Guten Morgen! Zeit für unser Roboter-Fitnesstraining! Macht alle mit!</field>
             <next>
               <block type="alpha_say">
-                <field name="TEXT">Erste Übung: Beide Arme hoch in die Luft strecken!</field>
+                <field name="TEXT">Erste Übung: 2 Schritte vorwärts laufen!</field>
                 <next>
-                  <block type="alpha_action">
-                    <field name="ACTION">017</field>
+                  <block type="alpha_walk">
+                    <field name="DIRECTION">forward</field>
+                    <field name="STEPS">2</field>
                     <next>
-                      <block type="alpha_wait">
-                        <field name="SECONDS">1</field>
+                      <block type="alpha_say">
+                        <field name="TEXT">Zweite Übung: Und jetzt Liegestütze machen!</field>
                         <next>
-                          <block type="alpha_say">
-                            <field name="TEXT">Und jetzt: Alle tief in die Kniebeuge gehen!</field>
+                          <block type="alpha_action">
+                            <field name="ACTION">pressup</field>
                             <next>
-                              <block type="alpha_action">
-                                <field name="ACTION">031</field>
+                              <block type="alpha_say">
+                                <field name="TEXT">Sehr stark! Jetzt 2 Schritte zurück und tief in die Kniebeuge!</field>
                                 <next>
-                                  <block type="alpha_say">
-                                    <field name="TEXT">Super gemacht! Großer Applaus für euch alle!</field>
+                                  <block type="alpha_walk">
+                                    <field name="DIRECTION">backward</field>
+                                    <field name="STEPS">2</field>
                                     <next>
-                                      <block type="alpha_sound">
-                                        <field name="SOUND">applause</field>
+                                      <block type="alpha_action">
+                                        <field name="ACTION">031</field>
                                         <next>
-                                          <block type="alpha_action">
-                                            <field name="ACTION">018</field>
+                                          <block type="alpha_say">
+                                            <field name="TEXT">Super gemacht! Großer Applaus für euch alle!</field>
+                                            <next>
+                                              <block type="alpha_sound">
+                                                <field name="SOUND">applause</field>
+                                                <next>
+                                                  <block type="alpha_action">
+                                                    <field name="ACTION">018</field>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
                                           </block>
                                         </next>
                                       </block>

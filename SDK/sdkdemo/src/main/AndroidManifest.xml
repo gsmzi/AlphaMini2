@@ -40,6 +40,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="com.ubtrobot.mini.sdkdemo.SPEAK_TEST" />
+                <action android:name="com.ubtrobot.mini.sdkdemo.WALK" />
+                <action android:name="com.ubtrobot.mini.sdkdemo.TURN" />
+                <action android:name="com.ubtrobot.mini.sdkdemo.ACTION" />
+                <action android:name="com.ubtrobot.mini.sdkdemo.ACTION_STOP" />
+                <action android:name="com.ubtrobot.mini.sdkdemo.EXPRESSION" />
+                <action android:name="com.ubtrobot.mini.sdkdemo.LIGHT" />
             </intent-filter>
         </receiver>
 

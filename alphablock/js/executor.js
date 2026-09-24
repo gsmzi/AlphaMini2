@@ -109,6 +109,50 @@ class AlphaExecutor {
         await this.delay(400);
     }
 
+    async walk(direction = 'forward', steps = 2) {
+        if (this.shouldStop) return;
+
+        // 1. Im Simulator animieren & Sound abspielen
+        const simPromise = this.simulator.walk(direction, steps);
+
+        // 2. Falls echter Roboter aktiv: HTTP-Befehl senden
+        if (this.mode === 'robot') {
+            try {
+                await fetch(`${this.apiBase}/api/robot/walk`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ direction, steps })
+                });
+            } catch (err) {
+                console.warn('[Executor] Roboter-Laufbefehl fehlgeschlagen:', err);
+            }
+        }
+
+        await simPromise;
+    }
+
+    async turn(direction = 'left', steps = 2) {
+        if (this.shouldStop) return;
+
+        // 1. Im Simulator animieren & Sound abspielen
+        const simPromise = this.simulator.turn(direction, steps);
+
+        // 2. Falls echter Roboter aktiv: HTTP-Befehl senden
+        if (this.mode === 'robot') {
+            try {
+                await fetch(`${this.apiBase}/api/robot/turn`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ direction, steps })
+                });
+            } catch (err) {
+                console.warn('[Executor] Roboter-Drehbefehl fehlgeschlagen:', err);
+            }
+        }
+
+        await simPromise;
+    }
+
     async playAction(actionId) {
         if (this.shouldStop) return;
 
@@ -130,6 +174,7 @@ class AlphaExecutor {
         const actionDurations = {
             '010': 3000, // Winken
             '014': 5500, // Tanzen
+            'pressup': 4500, // Liegestütze
             '017': 2500, // Hände hoch
             '018': 3000, // Klatschen
             '016': 2800, // Verbeugen

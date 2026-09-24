@@ -24,6 +24,8 @@ const TOOLBOX_XML = `
   </category>
 
   <category name="🕺 Bewegung" colour="${ALPHA_COLORS.MOTION}">
+    <block type="alpha_walk"></block>
+    <block type="alpha_turn"></block>
     <block type="alpha_action"></block>
     <block type="alpha_stop_action"></block>
     <block type="alpha_head_turn"></block>

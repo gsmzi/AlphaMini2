@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 =============================================================================
-AlphaBlock Server - Scratch-Programmierumgebung für Alpha Mini (5. Klasse)
+AlphaBlock Server - Scratch-Programmierumgebung für Alpha Mini
 =============================================================================
 Ein schlanker, robuster Python-Server (100% Standardbibliothek, keine Installation
 von externen Bibliotheken wie Flask nötig).
@@ -108,8 +108,34 @@ class RobotBridge:
         return True
 
     @staticmethod
+    def walk(direction="forward", steps=2):
+        """Lässt den Roboter vorwärts oder rückwärts laufen"""
+        print(f"[Roboter] 🚶 Laufe {steps} Schritte {direction}", flush=True)
+        cmd = [
+            "am", "broadcast",
+            "-a", "com.ubtrobot.mini.sdkdemo.WALK",
+            "--es", "direction", direction,
+            "--ei", "steps", str(steps)
+        ]
+        RobotBridge.run_adb_shell(cmd)
+        return True
+
+    @staticmethod
+    def turn(direction="left", steps=2):
+        """Dreht den Roboter um eine bestimmte Anzahl Schritte nach links/rechts"""
+        print(f"[Roboter] 🔄 Drehe {steps} Schritte {direction}", flush=True)
+        cmd = [
+            "am", "broadcast",
+            "-a", "com.ubtrobot.mini.sdkdemo.TURN",
+            "--es", "direction", direction,
+            "--ei", "steps", str(steps)
+        ]
+        RobotBridge.run_adb_shell(cmd)
+        return True
+
+    @staticmethod
     def play_action(action_id):
-        """Führt eine Bewegung aus (z.B. 010=Winken, 014=Tanzen, 017=Arme hoch)"""
+        """Führt eine Bewegung aus (z.B. 010=Winken, 014=Tanzen, pressup=Liegestütze)"""
         print(f"[Roboter] 🕺 Aktion: {action_id}", flush=True)
         # Sende Broadcast / Intent für Aktion
         cmd = [
@@ -232,6 +258,22 @@ class AlphaBlockHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json({"success": True})
             return
 
+        # API: Laufen
+        if parsed.path == "/api/robot/walk":
+            direction = data.get("direction", "forward")
+            steps = int(data.get("steps", 2))
+            RobotBridge.walk(direction, steps)
+            self.send_json({"success": True})
+            return
+
+        # API: Drehen
+        if parsed.path == "/api/robot/turn":
+            direction = data.get("direction", "left")
+            steps = int(data.get("steps", 2))
+            RobotBridge.turn(direction, steps)
+            self.send_json({"success": True})
+            return
+
         # API: Mimik ändern
         if parsed.path == "/api/robot/express":
             expr = data.get("expression", "emo_007")
@@ -287,7 +329,7 @@ def start_server(port=8080):
         httpd = http.server.ThreadingHTTPServer(server_address, AlphaBlockHandler)
 
     print("=" * 65)
-    print(" 🤖 AlphaBlock - Programmierumgebung für Alpha Mini (5. Klasse)")
+    print(" 🤖 AlphaBlock - Programmierumgebung für Alpha Mini")
     print("=" * 65)
     print(f" [OK] Server läuft erfolgreich auf Port {port}!")
     print(f" 👉 Lokal öffnen:     http://localhost:{port}")

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AlphaBlock - Roboter-Programmierung für die 5. Klasse</title>
+    <title>AlphaBlock - Roboter-Programmierung</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -15,7 +15,6 @@
         <div class="brand-section">
             <div class="logo-text">
                 🤖 AlphaBlock
-                <span class="tag-badge">5. Klasse</span>
             </div>
         </div>
 
@@ -83,7 +82,7 @@
             </div>
 
             <!-- Interaktive Roboter-Bühne -->
-            <div class="robot-stage">
+            <div class="robot-stage" id="simStage">
                 
                 <!-- Sprechblase -->
                 <div class="speech-bubble" id="simSpeechBubble">
@@ -91,42 +90,103 @@
                 </div>
 
                 <!-- Alpha Mini 2D Avatar -->
-                <div class="robot-body" id="robotAvatar">
-                    
-                    <!-- Kopf & Ohren -->
-                    <div class="robot-head">
-                        <!-- Linkes Ohr LED -->
-                        <div class="ear left">
-                            <div class="led-indicator" id="simLeftEar"></div>
-                        </div>
-
-                        <!-- LCD Augen-Display -->
-                        <div class="screen-display">
-                            <div class="eye eye-normal" id="simLeftEye"></div>
-                            <div class="eye eye-normal" id="simRightEye"></div>
-                        </div>
-
-                        <!-- Rechtes Ohr LED -->
-                        <div class="ear right">
-                            <div class="led-indicator" id="simRightEar"></div>
-                        </div>
-                    </div>
-
-                    <!-- Oberkörper & Arme -->
-                    <div class="robot-torso">
-                        <div class="arm left"></div>
+                <div class="robot-container" id="robotContainer">
+                    <div class="robot-body" id="robotAvatar">
                         
-                        <!-- Brust-LED -->
-                        <div class="chest-circle">
-                            <div class="chest-led" id="simChestLed"></div>
+                        <!-- Kopf & Ohren -->
+                        <div class="robot-head">
+                            <!-- Sensor auf Stirn -->
+                            <div class="head-sensor"></div>
+
+                            <!-- Linkes Ohr LED (kreisförmiger Ring) -->
+                            <div class="ear left">
+                                <div class="ear-cap">
+                                    <div class="led-indicator" id="simLeftEar"></div>
+                                </div>
+                            </div>
+
+                            <!-- LCD Augen-Display (Visier) -->
+                            <div class="screen-display">
+                                <div class="eye eye-normal" id="simLeftEye"></div>
+                                <div class="eye eye-normal" id="simRightEye"></div>
+                            </div>
+
+                            <!-- Rechtes Ohr LED (kreisförmiger Ring) -->
+                            <div class="ear right">
+                                <div class="ear-cap">
+                                    <div class="led-indicator" id="simRightEar"></div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="arm right"></div>
+                        <!-- Hals-Gelenk -->
+                        <div class="robot-neck"></div>
+
+                        <!-- Oberkörper mit Brust-LED & Armen -->
+                        <div class="robot-torso">
+                            <!-- Linker Arm (Gelenk-Aufbau) -->
+                            <div class="arm left">
+                                <div class="shoulder"></div>
+                                <div class="upper-arm"></div>
+                                <div class="forearm">
+                                    <div class="hand"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Brustpanzer & LED-Knopf -->
+                            <div class="chest-plate">
+                                <div class="chest-accent"></div>
+                                <div class="chest-circle">
+                                    <div class="chest-led" id="simChestLed"></div>
+                                </div>
+                            </div>
+
+                            <!-- Rechter Arm (Gelenk-Aufbau) -->
+                            <div class="arm right">
+                                <div class="shoulder"></div>
+                                <div class="upper-arm"></div>
+                                <div class="forearm">
+                                    <div class="hand"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Becken / Hüfte -->
+                        <div class="robot-pelvis"></div>
+
+                        <!-- Beine & Füße -->
+                        <div class="robot-legs">
+                            <!-- Linkes Bein -->
+                            <div class="leg left">
+                                <div class="thigh"></div>
+                                <div class="knee"></div>
+                                <div class="shin"></div>
+                                <div class="foot">
+                                    <div class="foot-toe"></div>
+                                </div>
+                            </div>
+
+                            <!-- Rechtes Bein -->
+                            <div class="leg right">
+                                <div class="thigh"></div>
+                                <div class="knee"></div>
+                                <div class="shin"></div>
+                                <div class="foot">
+                                    <div class="foot-toe"></div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
+                    <!-- Bodenschatten -->
+                    <div class="robot-shadow" id="robotShadow"></div>
                 </div>
 
-                <!-- Aktions-Badge (z.B. "Tanzen...") -->
+                <!-- Bühnenboden-Linie -->
+                <div class="stage-floor"></div>
+
+                <!-- Aktions-Badge (z.B. "Tanzen...", "Laufe 2 Schritte") -->
                 <div class="action-badge" id="simActionBadge">Aktion</div>
             </div>
         </aside>
