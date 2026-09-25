@@ -46,9 +46,10 @@
         </div>
 
         <div class="status-section">
+            <button id="btnTestRobot" class="header-btn" style="background: #2a9d8f; color: #fff; font-weight: bold; margin-right: 8px;" title="Testet die Verbindung zum Roboter sofort (Roboter winkt)">👋 Test: Winken</button>
             <div class="status-badge" id="robotStatusBadge" title="Verbindungsstatus zum Alpha Mini Roboter">
                 <div class="status-dot offline" id="robotStatusDot"></div>
-                <span id="robotStatusText">Simulator aktiv</span>
+                <span id="robotStatusText">Verbindung wird geprüft...</span>
             </div>
         </div>
     </header>
@@ -71,8 +72,8 @@
                 </div>
                 <div class="mode-toggle">
                     <select id="modeSelect" class="mode-select" title="Wähle, worauf dein Code ausgeführt werden soll">
+                        <option value="robot" selected>🤖 Echter Roboter</option>
                         <option value="simulator">🖥️ Simulator</option>
-                        <option value="robot">🤖 Echter Roboter</option>
                     </select>
                 </div>
             </div>
@@ -215,12 +216,12 @@
     <script src="lib/de.js"></script>
 
     <!-- AlphaBlock Custom Module -->
-    <script src="js/blocks.js?v=20260925_3"></script>
-    <script src="js/generator.js?v=20260925_3"></script>
-    <script src="js/simulator.js?v=20260925_3"></script>
-    <script src="js/executor.js?v=20260925_3"></script>
-    <script src="js/examples.js?v=20260925_3"></script>
-    <script src="js/app.js?v=20260925_3"></script>
+    <script src="js/blocks.js?v=20260925_4"></script>
+    <script src="js/generator.js?v=20260925_4"></script>
+    <script src="js/simulator.js?v=20260925_4"></script>
+    <script src="js/executor.js?v=20260925_4"></script>
+    <script src="js/examples.js?v=20260925_4"></script>
+    <script src="js/app.js?v=20260925_4"></script>
 
 </body>
 </html>

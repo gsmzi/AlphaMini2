@@ -14,8 +14,8 @@ class AlphaExecutor {
         this.simulator = simulator;
         this.isRunning = false;
         this.shouldStop = false;
-        this.mode = 'simulator'; // 'simulator' oder 'robot'
-        this.apiBase = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'http://localhost:8080';
+        this.mode = 'robot'; // 'robot' als Standard!
+        this.apiBase = (typeof window !== 'undefined' && window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) ? window.location.origin : 'http://127.0.0.1:8080';
         this.currentHighlightedBlock = null;
     }
 
@@ -79,16 +79,20 @@ class AlphaExecutor {
 
     async sendRobotCommand(endpoint, data = {}) {
         if (this.mode !== 'robot') return;
+        console.log(`[Executor] 🤖 Sende Roboter-Befehl an ${endpoint}:`, data);
         try {
             const controller = new AbortController();
             const timer = setTimeout(() => controller.abort(), 6000);
-            await fetch(`${this.apiBase}${endpoint}`, {
+            const res = await fetch(`${this.apiBase}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
                 signal: controller.signal
             });
             clearTimeout(timer);
+            if (!res.ok) {
+                console.warn(`[Executor] Roboter-Antwort Status: ${res.status}`);
+            }
         } catch (err) {
             console.warn(`[Executor] Roboter-Befehl an ${endpoint} fehlgeschlagen:`, err);
         }
@@ -103,10 +107,11 @@ class AlphaExecutor {
 
         const isRobotMode = (this.mode === 'robot');
 
-        // 1. Im Simulator anzeigen (Audio nur am PC abspielen, wenn nicht im Roboter-Modus)
-        const simPromise = this.simulator.speak(text, mood, !isRobotMode);
+        // 1. PC Sprachausgabe (damit Schüler die deutsche Sprache immer klar und deutlich hören)
+        // und Anzeige im Simulator
+        const simPromise = this.simulator.speak(text, mood, true);
 
-        // 2. Falls echter Roboter aktiv: HTTP-Befehl senden
+        // 2. Falls echter Roboter aktiv: Zeige auch auf dem echten Roboter LCD-Augenmimik
         if (isRobotMode) {
             await this.sendRobotCommand('/api/robot/say', { text, mood });
         }

@@ -121,7 +121,7 @@ if "!PYTHON_CMD!"=="py -3" (
 
 echo [3/3] Oeffne Programmierumgebung im Webbrowser...
 ping 127.0.0.1 -n 3 >nul
-start http://localhost:8080
+start http://127.0.0.1:8080
 
 echo.
 echo ========================================================

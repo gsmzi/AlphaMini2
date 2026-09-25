@@ -23,5 +23,6 @@ Desktop.ini
 __pycache__/
 *.pyc
 *.pyo
+*.log
 SDK/llm_server/vosk-model-*/
 *.apk

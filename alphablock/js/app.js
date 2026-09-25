@@ -187,6 +187,34 @@ function setupUIListeners() {
         });
     }
 
+    // 👋 Sofort-Test: Winken (Testet sofort die USB-Verbindung und Servomotoren)
+    const btnTestRobot = document.getElementById('btnTestRobot');
+    if (btnTestRobot) {
+        btnTestRobot.addEventListener('click', async () => {
+            const origText = btnTestRobot.innerText;
+            btnTestRobot.innerText = '⏳ Winkt...';
+            btnTestRobot.disabled = true;
+            try {
+                const apiBase = (window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:'))
+                    ? window.location.origin
+                    : 'http://127.0.0.1:8080';
+                await fetch(`${apiBase}/api/robot/action`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: '010' })
+                });
+                if (simulator) simulator.playAction('010');
+            } catch (err) {
+                console.error('[App] Test fehlgeschlagen:', err);
+            } finally {
+                setTimeout(() => {
+                    btnTestRobot.innerText = origText;
+                    btnTestRobot.disabled = false;
+                }, 3000);
+            }
+        });
+    }
+
     // 🚩 Start
     document.getElementById('btnStart').addEventListener('click', () => {
         if (modeSelect) {
@@ -304,12 +332,15 @@ async function checkRobotConnection() {
     if (!statusDot || !statusText) return;
 
     try {
-        const res = await fetch('/api/status', { cache: 'no-store' });
+        const apiBase = (window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:'))
+            ? window.location.origin
+            : 'http://127.0.0.1:8080';
+        const res = await fetch(`${apiBase}/api/status`, { cache: 'no-store' });
         if (res.ok) {
             const data = await res.json();
             if (data.connected) {
                 statusDot.className = 'status-dot online';
-                statusText.innerText = `Roboter verbunden (${data.device_id || 'USB/WLAN'})`;
+                statusText.innerText = `Roboter verbunden (${data.device_id || 'USB'})`;
 
                 const modeSelect = document.getElementById('modeSelect');
                 const notice = document.getElementById('robotModeNotice');
@@ -329,3 +360,17 @@ async function checkRobotConnection() {
     statusDot.className = 'status-dot offline';
     statusText.innerText = 'Simulator aktiv (Kein Roboter)';
 }
+
+// Globales Fehler-Logging zur Fehlersuche
+window.addEventListener('error', (event) => {
+    try {
+        const apiBase = (window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:'))
+            ? window.location.origin
+            : 'http://127.0.0.1:8080';
+        fetch(`${apiBase}/api/log`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: `Client Error: ${event.message} at ${event.filename}:${event.lineno}` })
+        }).catch(() => {});
+    } catch (e) {}
+});

@@ -47,31 +47,50 @@ def find_adb():
     return "adb"
 
 ADB_PATH = find_adb()
+LOG_FILE = SCRIPT_DIR / "alphablock_server.log"
+
+def server_log(msg):
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+    line = f"[{ts}] {msg}"
+    print(line, flush=True)
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
 
 WIN32_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
 class RobotBridge:
     """Kommunikations-Brücke zum Alpha Mini Roboter über ADB"""
 
+    _cached_devices = []
+    _last_device_check = 0.0
+
     @staticmethod
     def get_connected_devices():
-        """Gibt eine Liste aller per ADB erkannten Geräte zurück"""
+        """Gibt eine Liste aller per ADB erkannten Geräte zurück (mit 3s Cache)"""
+        now = time.time()
+        if now - RobotBridge._last_device_check < 3.0:
+            return RobotBridge._cached_devices
         try:
             result = subprocess.run(
                 [ADB_PATH, "devices"],
                 capture_output=True,
                 text=True,
                 creationflags=WIN32_NO_WINDOW,
-                timeout=6
+                timeout=4
             )
             devices = []
             for line in result.stdout.strip().splitlines():
                 parts = line.split()
                 if len(parts) >= 2 and parts[1] == "device":
                     devices.append(parts[0])
+            RobotBridge._cached_devices = devices
+            RobotBridge._last_device_check = now
             return devices
         except Exception:
-            return []
+            return RobotBridge._cached_devices
 
     @staticmethod
     def is_connected():
@@ -86,34 +105,26 @@ class RobotBridge:
             res = subprocess.run(cmd, capture_output=True, text=True, creationflags=WIN32_NO_WINDOW, timeout=6)
             return res.returncode == 0, res.stdout
         except Exception as e:
+            server_log(f"[ADB Fehler] {e}")
             return False, str(e)
 
     @staticmethod
     def speak(text):
-        """Lässt den Roboter über die installierte App sprechen"""
-        print(f"[Roboter] 🗣️ Spreche: '{text}'", flush=True)
-        # 1. Intent Broadcast an den BootReceiver der App senden
+        """Lässt den Roboter über die installierte App sprechen/Mimik zeigen"""
+        server_log(f"[Roboter] 🗣️ Spreche: '{text}'")
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.SPEAK_TEST",
             "-p", "com.ubtrobot.mini.sdkdemo",
             "--es", "text", text
         ]
-        ok, out = RobotBridge.run_adb_shell(cmd)
-        
-        # 2. Falls App noch nicht aktiv im Vordergrund, Activity mit Intent starten
-        if not ok or "result=0" not in out:
-            RobotBridge.run_adb_shell([
-                "am", "start",
-                "-n", "com.ubtrobot.mini.sdkdemo/.voicedialogue.VoiceDialogueActivityV3",
-                "--es", "speak_test_text", text
-            ])
+        RobotBridge.run_adb_shell(cmd)
         return True
 
     @staticmethod
     def walk(direction="forward", steps=2):
         """Lässt den Roboter vorwärts oder rückwärts laufen"""
-        print(f"[Roboter] 🚶 Laufe {steps} Schritte {direction}", flush=True)
+        server_log(f"[Roboter] 🚶 Laufe {steps} Schritte {direction}")
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.WALK",
@@ -127,7 +138,7 @@ class RobotBridge:
     @staticmethod
     def turn(direction="left", steps=2):
         """Dreht den Roboter um eine bestimmte Anzahl Schritte nach links/rechts"""
-        print(f"[Roboter] 🔄 Drehe {steps} Schritte {direction}", flush=True)
+        server_log(f"[Roboter] 🔄 Drehe {steps} Schritte {direction}")
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.TURN",
@@ -141,8 +152,7 @@ class RobotBridge:
     @staticmethod
     def play_action(action_id):
         """Führt eine Bewegung aus (z.B. 010=Winken, 014=Tanzen, pressup=Liegestütze)"""
-        print(f"[Roboter] 🕺 Aktion: {action_id}", flush=True)
-        # Sende Broadcast / Intent für Aktion
+        server_log(f"[Roboter] 🕺 Aktion: {action_id}")
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.ACTION",
@@ -155,7 +165,7 @@ class RobotBridge:
     @staticmethod
     def stop_action():
         """Stoppt laufende Bewegungen"""
-        print("[Roboter] 🛑 Stoppe Bewegung", flush=True)
+        server_log("[Roboter] 🛑 Stoppe Bewegung")
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.ACTION_STOP",
@@ -167,7 +177,7 @@ class RobotBridge:
     @staticmethod
     def set_expression(expression_id):
         """Setzt die LCD-Augenmimik (z.B. emo_007=Lächeln)"""
-        print(f"[Roboter] 😊 Mimik: {expression_id}", flush=True)
+        server_log(f"[Roboter] 😊 Mimik: {expression_id}")
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.EXPRESSION",
@@ -180,7 +190,7 @@ class RobotBridge:
     @staticmethod
     def set_light(color):
         """Setzt LED-Farben"""
-        print(f"[Roboter] 💡 Lichter: {color}", flush=True)
+        server_log(f"[Roboter] 💡 Lichter: {color}")
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.LIGHT",
@@ -239,11 +249,22 @@ class AlphaBlockHandler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        try:
+            self._handle_post()
+        except Exception as e:
+            import traceback
+            server_log(f"[POST Fehler] {e}\n{traceback.format_exc()}")
+            try:
+                self.send_error(500, f"Interner Serverfehler: {e}")
+            except Exception:
+                pass
+
+    def _handle_post(self):
         parsed = urllib.parse.urlparse(self.path)
 
         # JSON Body lesen
         content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length)
+        body = self.rfile.read(content_length) if content_length > 0 else b""
         data = {}
         if body:
             try:
@@ -303,6 +324,20 @@ class AlphaBlockHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json({"success": True})
             return
 
+        # API: Live-Verbindungstest (Winken)
+        if parsed.path == "/api/robot/test":
+            server_log("[API] 🧪 Live-Test Winken ausgelöst")
+            RobotBridge.play_action("010")
+            self.send_json({"success": True, "message": "Testaktion Winken gestartet"})
+            return
+
+        # API: Browser Client-Logs
+        if parsed.path == "/api/log":
+            msg = data.get("message", "")
+            server_log(f"[Browser-Log] {msg}")
+            self.send_json({"success": True})
+            return
+
         # Fallback 404
         self.send_error(404, "Endpunkt nicht gefunden")
 
@@ -341,7 +376,7 @@ def start_server(port=8080):
     print(" 🤖 AlphaBlock - Programmierumgebung für Alpha Mini")
     print("=" * 65)
     print(f" [OK] Server läuft erfolgreich auf Port {port}!")
-    print(f" 👉 Lokal öffnen:     http://localhost:{port}")
+    print(f" 👉 Lokal öffnen:     http://127.0.0.1:{port}")
     
     # Lokale IP für das Schulnetzwerk anzeigen
     import socket

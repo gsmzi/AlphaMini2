@@ -15,6 +15,8 @@ import com.ubtrobot.led.LightApi
 import com.ubtrobot.master.component.ResourcePolicy
 import com.ubtrobot.mini.sdkdemo.voicedialogue.VoiceDialogueService
 import com.ubtrobot.mini.sdkdemo.voicedialogue.VoiceDialogueActivityV3
+import com.ubtrobot.mini.voice.VoiceListener
+import com.ubtrobot.mini.voice.VoicePool
 import com.ubtrobot.transport.message.CallException
 import com.ubtrobot.transport.message.Request
 import com.ubtrobot.transport.message.Response
@@ -55,13 +57,21 @@ class BootReceiver : BroadcastReceiver() {
                 }
             }
             ACTION_SPEAK_TEST -> {
-                val text = intent.getStringExtra("text") ?: "Hello, I am Wukong."
+                val text = intent.getStringExtra("text") ?: "Hallo"
                 Log.d(TAG, "SPEAK_TEST received: text='$text'")
-                val activityIntent = Intent(context, VoiceDialogueActivityV3::class.java).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    putExtra("speak_test_text", text)
+                try {
+                    ExpressApi.get().doExpress("emo_008", 1, false, ResourcePolicy.GiveUp, null)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error showing speak expression: ${e.message}")
                 }
-                context.startActivity(activityIntent)
+                try {
+                    VoicePool.get().playTTs(text, ResourcePolicy.Exclusive, object : VoiceListener {
+                        override fun onCompleted() { Log.d(TAG, "playTTs completed") }
+                        override fun onError(code: Int, msg: String?) { Log.w(TAG, "playTTs error: $code $msg") }
+                    })
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error playing TTS: ${e.message}")
+                }
             }
             ACTION_WALK -> {
                 val direction = intent.getStringExtra("direction") ?: "forward"
