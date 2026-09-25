@@ -14,6 +14,9 @@ const TOOLBOX_XML = `
   <category name="🚩 Ereignisse" colour="${ALPHA_COLORS.EVENTS}">
     <block type="alpha_when_start"></block>
     <block type="alpha_when_chest_button"></block>
+    <block type="alpha_when_head_touched"></block>
+    <block type="alpha_when_person_detected"></block>
+    <block type="alpha_when_fallen"></block>
     <block type="alpha_when_heard"></block>
   </category>
 
@@ -27,8 +30,10 @@ const TOOLBOX_XML = `
     <block type="alpha_walk"></block>
     <block type="alpha_turn"></block>
     <block type="alpha_action"></block>
-    <block type="alpha_stop_action"></block>
+    <block type="alpha_motor_move"></block>
+    <block type="alpha_motor_relax"></block>
     <block type="alpha_head_turn"></block>
+    <block type="alpha_stop_action"></block>
   </category>
 
   <category name="😊 Mimik" colour="${ALPHA_COLORS.LOOKS}">
@@ -38,6 +43,14 @@ const TOOLBOX_XML = `
   <category name="💡 Lichter" colour="${ALPHA_COLORS.LIGHTS}">
     <block type="alpha_set_light"></block>
     <block type="alpha_light_effect"></block>
+  </category>
+
+  <category name="🔍 Sensoren" colour="${ALPHA_COLORS.SENSORS}">
+    <block type="alpha_sensor_battery"></block>
+    <block type="alpha_sensor_charging"></block>
+    <block type="alpha_sensor_posture"></block>
+    <block type="alpha_sensor_person"></block>
+    <block type="alpha_sensor_head"></block>
   </category>
 
   <category name="⏱️ Steuerung" colour="${ALPHA_COLORS.CONTROL}">
@@ -227,6 +240,35 @@ function setupUIListeners() {
     document.getElementById('btnStop').addEventListener('click', () => {
         executor.stop();
     });
+
+    // 🎮 Sensor-Simulation Buttons
+    const btnSimHead = document.getElementById('btnSimHead');
+    if (btnSimHead) {
+        btnSimHead.addEventListener('click', () => {
+            if (simulator) simulator.triggerHeadTouch('touch');
+        });
+    }
+
+    const btnSimPerson = document.getElementById('btnSimPerson');
+    if (btnSimPerson) {
+        btnSimPerson.addEventListener('click', () => {
+            if (simulator) simulator.triggerPersonDetected();
+        });
+    }
+
+    const btnSimFall = document.getElementById('btnSimFall');
+    if (btnSimFall) {
+        btnSimFall.addEventListener('click', () => {
+            if (simulator) simulator.triggerFallen();
+        });
+    }
+
+    const btnSimStand = document.getElementById('btnSimStand');
+    if (btnSimStand) {
+        btnSimStand.addEventListener('click', () => {
+            if (simulator) simulator.playAction('reset_stand');
+        });
+    }
 
     // 💾 Speichern
     document.getElementById('btnSave').addEventListener('click', () => {

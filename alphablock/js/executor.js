@@ -166,7 +166,9 @@ class AlphaExecutor {
             '016': 2800, // Verbeugen
             '021': 3000, // Nachdenken
             '031': 3500, // Kniebeuge
-            'standup': 4000
+            'lie_down': 3500, // Hinlegen
+            'standup': 4000, // Aufstehen
+            'reset_stand': 2500 // Grundstellung
         };
         const dur = actionDurations[actionId] || 2500;
         await this.wait(dur / 1000);
@@ -181,6 +183,24 @@ class AlphaExecutor {
         if (this.shouldStop) return;
         this.simulator.turnHead(direction);
         await this.delay(500);
+    }
+
+    async moveMotor(motorId, angle, durationSec = 1) {
+        if (this.shouldStop) return;
+        this.simulator.moveMotor(motorId, angle, durationSec);
+        await this.sendRobotCommand('/api/robot/motor', {
+            motor_id: motorId,
+            angle: angle,
+            duration: Math.round(durationSec * 1000)
+        });
+        await this.wait(durationSec);
+    }
+
+    async relaxMotors(unlock = true) {
+        if (this.shouldStop) return;
+        this.simulator.relaxMotors(unlock);
+        await this.sendRobotCommand('/api/robot/motor_relax', { unlock });
+        await this.delay(300);
     }
 
     async setExpression(expr) {
@@ -199,11 +219,68 @@ class AlphaExecutor {
         await this.delay(200);
     }
 
-
     async lightEffect(effect, color, seconds) {
         if (this.shouldStop) return;
         this.simulator.setLightEffect(effect, color, seconds);
+        await this.sendRobotCommand('/api/robot/light', {
+            color: color,
+            effect: effect,
+            duration: Math.round(seconds * 1000)
+        });
         await this.wait(seconds);
+    }
+
+    // ==========================================
+    // SENSOREN
+    // ==========================================
+
+    async fetchSensors() {
+        const now = Date.now();
+        if (this._lastSensorFetch && now - this._lastSensorFetch < 1000 && this._cachedSensors) {
+            return this._cachedSensors;
+        }
+        try {
+            const res = await fetch(`${this.apiBase}/api/robot/sensors`);
+            if (res.ok) {
+                this._cachedSensors = await res.json();
+                this._lastSensorFetch = now;
+                return this._cachedSensors;
+            }
+        } catch (e) {
+            // Simulator Fallback
+        }
+        return {
+            battery: this.simulator.batteryLevel !== undefined ? this.simulator.batteryLevel : 90,
+            charging: Boolean(this.simulator.isCharging),
+            posture: this.simulator.posture || 'standing',
+            person_detected: Boolean(this.simulator.personDetected),
+            head_touch: Boolean(this.simulator.headTouched)
+        };
+    }
+
+    async getBattery() {
+        const s = await this.fetchSensors();
+        return s.battery !== undefined ? s.battery : 90;
+    }
+
+    async isCharging() {
+        const s = await this.fetchSensors();
+        return Boolean(s.charging);
+    }
+
+    async getPosture() {
+        const s = await this.fetchSensors();
+        return s.posture || this.simulator.posture || 'standing';
+    }
+
+    async isPersonNear() {
+        const s = await this.fetchSensors();
+        return Boolean(s.person_detected || this.simulator.personDetected);
+    }
+
+    async isHeadTouched() {
+        const s = await this.fetchSensors();
+        return Boolean(s.head_touch || this.simulator.headTouched);
     }
 
     // ==========================================

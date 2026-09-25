@@ -105,17 +105,60 @@ Baue das Programm so, dass zwischen den Ampelphasen immer 2 bis 3 Sekunden gewar
 
 ---
 
+### 🐱 Mission 6: Das Roboter-Haustier & Streichel-Sensor
+> **Schwierigkeit:** ⭐⭐☆ (Mittel)  
+> **Ziel:** Mache Alpha Mini zu einer Roboter-Katze, die auf Berührung am Kopf reagiert!
+
+**Deine Aufgaben:**
+1. Lass Alpha Mini sich am Start schlafen legen:
+   - Gesicht: `😴 Müde / Einschlafen`
+   - Licht: `✨ lasse Lichter [sanft atmen (Pulsieren)] in Farbe [Cyan Blau]`
+   - Aktion: `🛏️ Hinlegen (Schlafmodus)`
+2. Verwende nun den Kopf-Sensor-Block:
+   - `💆 Wenn Kopf [berührt / gestreichelt wird]`
+3. Wenn jemand den Kopf berührt oder im Simulator auf **„💆 Kopf berühren“** klickt:
+   - Augen mit `😍 Herzchen / Verliebt` leuchten lassen.
+   - Das Geräusch `🎵 spiele Geräusch [Kichern & Lachen]` abspielen.
+   - Alpha Mini soll sagen: *„Mmmh, das kitzelt! Ich bin wach!“*
+   - Er steht wieder auf mit `🧍 Wieder aufstehen`!
+
+---
+
+### 🦾 Mission 7: Der Schutzengel (Umfall-Erkennung & Aufstehen)
+> **Schwierigkeit:** ⭐⭐⭐ (Knobelaufgabe)  
+> **Ziel:** Wenn der Roboter umgestoßen wird, soll er automatisch warnen und wieder aufstehen!
+
+**Deine Aufgaben:**
+1. Nimm den Ereignis-Block `💥 Wenn Roboter umgefallen ist`.
+2. Schalte die Lichter sofort auf **Rot** (`🚨 Blinken` oder `💡 Rot`).
+3. Zeige ein trauriges Gesicht `😢 Traurig`.
+4. Lass ihn rufen: *„Hoppla, ich liege auf dem Boden! Ich rappele mich wieder auf!“*
+5. Füge den Block `🧍 Wieder aufstehen` ein.
+6. Wenn er steht, lächle wieder (`😊 Glücklich`) und sage: *„Alles gut, mir geht es super!“*
+7. Teste es im Simulator mit dem Button **„💥 Umwerfen“**!
+
+---
+
 ## 🧩 Teil 3: Block-Übersicht für Schüler
 
-| Block | Was er tut |
-|---|---|
-| `🚩 Wenn Start angeklickt wird` | Startet dein Programm, sobald du oben auf die Flagge klickst. |
-| `🗣️ sage [ Text ]` | Alpha Mini spricht deinen Text mit deutscher Sprachausgabe. |
-| `🗣️ sage [ Text ] mit Gefühl [ ... ]` | Spricht den Text fröhlich, aufgeregt, traurig oder wie ein Roboter. |
-| `🎵 spiele Geräusch [ ... ]` | Spielt lustige Sounds wie Lachen, Applaus, Tröte, Jubel oder Piepsen ab. |
-| `🕺 mache Aktion [ ... ]` | Führt echte Bewegungen aus (Tanzen, Winken, Arme hoch, Klatschen, Verbeugen). |
-| `😊 zeige Gesicht [ ... ]` | Schaltet die beiden Bildschirme in den Augen um (Lächeln, Zwinkern, Herzen, Traurig). |
-| `💡 schalte Lichter auf [ Farbe ]` | Bringt die Ohren und die Brust von Alpha Mini in deiner Wunschfarbe zum Leuchten. |
-| `✨ lasse Lichter [ blinken/atmen ]` | Lässt die Lichter pulsieren oder schnell blinken. |
-| `⏱️ warte [ ... ] Sekunden` | Macht eine Pause, bevor der nächste Block an der Reihe ist. |
-| `🔁 wiederhole [ ... ] mal` | Wiederholt alle darin liegenden Blöcke automatisch. |
+| Block | Kategorie | Was er tut |
+|---|---|---|
+| `🚩 Wenn Start angeklickt wird` | 🚩 Ereignisse | Startet dein Programm, sobald du oben auf die Flagge klickst. |
+| `💆 Wenn Kopf [berührt]` | 🚩 Ereignisse | Reagiert sofort, wenn jemand den Sensor oben auf Alpha Minis Kopf berührt. |
+| `🚶 Wenn sich jemand nähert` | 🚩 Ereignisse | Reagiert über den Infrarot-Sensor, wenn eine Person vor den Roboter tritt. |
+| `💥 Wenn Roboter umgefallen ist` | 🚩 Ereignisse | Lagesensor: Schlägt Alarm, wenn der Roboter umgeworfen wird oder flach liegt. |
+| `🗣️ sage [ Text ]` | 🗣️ Sprache | Alpha Mini spricht deinen Text mit deutscher Sprachausgabe. |
+| `🗣️ sage [ Text ] mit Gefühl [ ... ]` | 🗣️ Sprache | Spricht den Text fröhlich, aufgeregt, traurig oder wie ein Roboter. |
+| `🎵 spiele Geräusch [ ... ]` | 🗣️ Sprache | Spielt lustige Sounds wie Lachen, Applaus, Tröte, Jubel oder Piepsen ab. |
+| `🕺 mache Aktion [ ... ]` | 🚶 Bewegung | Führt Aktionen aus (Aufstehen, Hinlegen, Hocke, Tanzen, Winken, Liegestütze). |
+| `🦾 bewege Motor [Kopf/Arm] auf [Winkel]` | 🚶 Bewegung | Bewegt ein einzelnes Gelenk gradgenau (z. B. Kopf nicken, Arm heben). |
+| `🍃 entspanne alle Motoren` | 🚶 Bewegung | Schaltet die Motoren weich, damit man die Gelenke vorsichtig per Hand bewegen kann. |
+| `😊 zeige Gesicht [ ... ]` | 😊 Aussehen | Schaltet die LCD-Augen um (Lächeln, Herzchen, Wütend, Müde, Zwinkern). |
+| `💡 schalte Lichter auf [ Farbe ]` | 💡 Lichter | Bringt die Ohren und die Brust von Alpha Mini in deiner Wunschfarbe zum Leuchten. |
+| `✨ lasse Lichter [blinken/atmen/kreisen]` | 💡 Lichter | Tolle Licht-Effekte: Pulsieren wie ein Atem oder bunter Regenbogen-Kreis. |
+| `🔋 Akku-Ladestand in %` | 🔍 Sensoren | Liest den echten Akkustand des Roboters ab (0 bis 100%). |
+| `🔌 lädt der Akku gerade?` | 🔍 Sensoren | Gibt wahr zurück, wenn das USB-Ladekabel eingesteckt ist. |
+| `🔍 liegt Roboter auf dem [Rücken/Bauch]?` | 🔍 Sensoren | Fragt ab, ob der Roboter aufrecht steht, auf dem Rücken oder Bauch liegt. |
+| `⏱️ warte [ ... ] Sekunden` | ⏱️ Steuerung | Macht eine Pause, bevor der nächste Block an der Reihe ist. |
+| `🔁 wiederhole [ ... ] mal` | ⏱️ Steuerung | Wiederholt alle darin liegenden Blöcke automatisch. |
+

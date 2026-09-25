@@ -962,6 +962,82 @@ body.program-running .btn-flag {
     100% { opacity: 1; transform: scale(1.1); }
 }
 
+/* 🛌 HINLEGEN (LIE DOWN) */
+.anim-lie-down {
+    transform: translateY(40px) rotate(88deg) scale(0.95) !important;
+    transition: transform 0.6s ease-in-out;
+}
+.anim-lie-down .arm.left { transform: rotate(15deg); }
+.anim-lie-down .arm.right { transform: rotate(-15deg); }
+.anim-lie-down .leg.left,
+.anim-lie-down .leg.right { transform: rotate(5deg); }
+
+/* 🪶 GELENKE ENTSPANNT (TEACH-IN) */
+.anim-relax-motors .arm.left {
+    transform: rotate(20deg);
+    transition: transform 0.5s ease;
+}
+.anim-relax-motors .arm.right {
+    transform: rotate(-20deg);
+    transition: transform 0.5s ease;
+}
+.anim-relax-motors .robot-head {
+    transform: translateY(6px) rotate(4deg);
+    transition: transform 0.5s ease;
+}
+
+/* 🔄 LED LAUFLICHT (CYCLE) */
+.led-cycle {
+    animation: led-cycle-anim 1.2s infinite linear;
+}
+@keyframes led-cycle-anim {
+    0%   { filter: hue-rotate(0deg); opacity: 1; }
+    50%  { filter: hue-rotate(180deg); opacity: 0.4; }
+    100% { filter: hue-rotate(360deg); opacity: 1; }
+}
+
+/* 🎮 SENSOR TESTLEISTE UNTER DER BÜHNE */
+.sensor-test-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #F8FAFC;
+    border-top: 1px solid #E2E8F0;
+    justify-content: center;
+    align-items: center;
+}
+.sensor-bar-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748B;
+    margin-right: 4px;
+}
+.sensor-btn {
+    background: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.sensor-btn:hover {
+    background: #E2E8F0;
+    border-color: #94A3B8;
+    color: #0F172A;
+    transform: translateY(-1px);
+}
+.sensor-btn:active {
+    transform: translateY(1px);
+}
+
 /* ==========================================================================
    CODE VORSCHAU MODAL (PYTHON)
    ========================================================================== */

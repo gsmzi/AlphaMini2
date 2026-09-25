@@ -67,6 +67,11 @@ class RobotBridge:
     _cached_devices = []
     _last_device_check = 0.0
 
+    _last_posture = "standing"
+    _cached_battery = 95
+    _cached_charging = False
+    _last_battery_check = 0.0
+
     @staticmethod
     def get_connected_devices():
         """Gibt eine Liste aller per ADB erkannten Geräte zurück (mit 3s Cache)"""
@@ -151,13 +156,54 @@ class RobotBridge:
 
     @staticmethod
     def play_action(action_id):
-        """Führt eine Bewegung aus (z.B. 010=Winken, 014=Tanzen, pressup=Liegestütze)"""
+        """Führt eine Bewegung aus (z.B. 010=Winken, 014=Tanzen, pressup=Liegestütze, standup=Aufstehen)"""
         server_log(f"[Roboter] 🕺 Aktion: {action_id}")
+        
+        # Haltungs-Status aktualisieren
+        if action_id == "lie_down":
+            RobotBridge._last_posture = "lying"
+            action_id = "031"  # In Hocke/Liegen absenken
+        elif action_id in ("squat", "squatdown"):
+            RobotBridge._last_posture = "squatting"
+            action_id = "031"
+        elif action_id in ("standup", "reset_stand"):
+            RobotBridge._last_posture = "standing"
+
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.ACTION",
             "-p", "com.ubtrobot.mini.sdkdemo",
             "--es", "action", action_id
+        ]
+        RobotBridge.run_adb_shell(cmd)
+        return True
+
+    @staticmethod
+    def move_motor(motor_id, angle, duration=1000):
+        """Bewegt ein einzelnes Gelenk (Motor-ID 1..14) auf Zielwinkel (0..240 Grad)"""
+        server_log(f"[Roboter] 🦾 Motor {motor_id} -> {angle}° ({duration}ms)")
+        cmd = [
+            "am", "broadcast",
+            "-a", "com.ubtrobot.mini.sdkdemo.MOTOR",
+            "-p", "com.ubtrobot.mini.sdkdemo",
+            "--ei", "motor_id", str(motor_id),
+            "--ei", "angle", str(angle),
+            "--ei", "duration", str(duration)
+        ]
+        RobotBridge.run_adb_shell(cmd)
+        return True
+
+    @staticmethod
+    def relax_motors(unlock=True, motor_id=0):
+        """Schaltet Motoren weich (Teach-In) oder sperrt sie wieder (motor_id 0 = alle)"""
+        action_name = "entspannen" if unlock else "sperren"
+        server_log(f"[Roboter] 🪶 Motoren {action_name} (ID: {motor_id})")
+        cmd = [
+            "am", "broadcast",
+            "-a", "com.ubtrobot.mini.sdkdemo.MOTOR",
+            "-p", "com.ubtrobot.mini.sdkdemo",
+            "--ei", "motor_id", str(motor_id),
+            "--ez", "unlock", "true" if unlock else "false"
         ]
         RobotBridge.run_adb_shell(cmd)
         return True
@@ -188,17 +234,49 @@ class RobotBridge:
         return True
 
     @staticmethod
-    def set_light(color):
-        """Setzt LED-Farben"""
-        server_log(f"[Roboter] 💡 Lichter: {color}")
+    def set_light(color="green", effect="normal", duration=3000):
+        """Setzt LED-Farben und Effekte (normal, breath, cycle, mouth_on, mouth_off)"""
+        server_log(f"[Roboter] 💡 Lichter: {color} (Effekt: {effect})")
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.LIGHT",
             "-p", "com.ubtrobot.mini.sdkdemo",
-            "--es", "color", color
+            "--es", "color", color,
+            "--es", "effect", effect,
+            "--ei", "duration", str(duration)
         ]
         RobotBridge.run_adb_shell(cmd)
         return True
+
+    @staticmethod
+    def get_sensor_data():
+        """Liest aktuelle Sensordaten aus (Akku, Ladezustand, Haltung)"""
+        now = time.time()
+        connected, _ = RobotBridge.is_connected()
+        if connected and (now - RobotBridge._last_battery_check > 5.0):
+            try:
+                ok, out = RobotBridge.run_adb_shell(["dumpsys", "battery"])
+                if ok and out:
+                    import re
+                    lvl_match = re.search(r"level:\s*(\d+)", out)
+                    if lvl_match:
+                        RobotBridge._cached_battery = int(lvl_match.group(1))
+                    stat_match = re.search(r"status:\s*(\d+)", out)
+                    ac_match = re.search(r"AC powered:\s*true", out, re.IGNORECASE)
+                    usb_match = re.search(r"USB powered:\s*true", out, re.IGNORECASE)
+                    RobotBridge._cached_charging = bool(
+                        (stat_match and stat_match.group(1) == "2") or ac_match or usb_match
+                    )
+                RobotBridge._last_battery_check = now
+            except Exception:
+                pass
+        return {
+            "battery": RobotBridge._cached_battery,
+            "charging": RobotBridge._cached_charging,
+            "posture": RobotBridge._last_posture,
+            "person_detected": False,
+            "head_touch": False
+        }
 
 
 class AlphaBlockHandler(http.server.SimpleHTTPRequestHandler):
@@ -229,7 +307,7 @@ class AlphaBlockHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # API: Roboter-Status abfragen
-        if parsed.path == "/api/status":
+        if parsed.path in ("/api/status", "/api/robot/status"):
             connected, device_id = RobotBridge.is_connected()
             response_data = {
                 "connected": connected,
@@ -238,6 +316,11 @@ class AlphaBlockHandler(http.server.SimpleHTTPRequestHandler):
                 "server_time": time.time()
             }
             self.send_json(response_data)
+            return
+
+        # API: Sensor-Daten abfragen (Akku, Ladezustand, Haltung)
+        if parsed.path == "/api/robot/sensors":
+            self.send_json(RobotBridge.get_sensor_data())
             return
 
         # API: Health-Check
@@ -311,10 +394,29 @@ class AlphaBlockHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json({"success": True})
             return
 
-        # API: Lichter setzen
+        # API: Lichter setzen und Effekte (normal, breath, cycle, mouth_on, mouth_off)
         if parsed.path == "/api/robot/light":
             color = data.get("color", "green")
-            RobotBridge.set_light(color)
+            effect = data.get("effect", "normal")
+            duration = int(data.get("duration", 3000))
+            RobotBridge.set_light(color, effect, duration)
+            self.send_json({"success": True})
+            return
+
+        # API: Einzelnes Gelenk bewegen
+        if parsed.path == "/api/robot/motor":
+            motor_id = int(data.get("motor_id", 1))
+            angle = int(data.get("angle", 120))
+            duration = int(data.get("duration", 1000))
+            RobotBridge.move_motor(motor_id, angle, duration)
+            self.send_json({"success": True})
+            return
+
+        # API: Motoren entspannen (Teach-In) oder sperren
+        if parsed.path == "/api/robot/motor_relax":
+            unlock = bool(data.get("unlock", True))
+            motor_id = int(data.get("motor_id", 0))
+            RobotBridge.relax_motors(unlock, motor_id)
             self.send_json({"success": True})
             return
 

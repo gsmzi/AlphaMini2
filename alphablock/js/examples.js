@@ -374,9 +374,92 @@ const ALPHA_EXAMPLES = {
     </next>
   </block>
 </xml>`
+    },
+
+    // ------------------------------------------------------------------------
+    // Beispiel 7: Roboter-Haustier & Sensoren
+    // ------------------------------------------------------------------------
+    'pet': {
+        name: '🐱 7. Roboter-Haustier & Sensoren',
+        description: 'Alpha Mini schläft, wacht beim Streicheln mit Herzaugen auf, steht auf und reagiert mit bunten Lichtern!',
+        xml: `<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="alpha_when_start" x="40" y="40">
+    <next>
+      <block type="alpha_expression">
+        <field name="EXPRESSION">sleepy</field>
+        <next>
+          <block type="alpha_light_effect">
+            <field name="EFFECT">breath</field>
+            <field name="COLOR">cyan</field>
+            <field name="SECONDS">3</field>
+            <next>
+              <block type="alpha_say">
+                <field name="TEXT">Gähn... Ich bin müde und mache ein kleines Nickerchen.</field>
+                <next>
+                  <block type="alpha_action">
+                    <field name="ACTION">lie_down</field>
+                    <next>
+                      <block type="alpha_wait">
+                        <field name="SECONDS">2</field>
+                        <next>
+                          <block type="alpha_say">
+                            <field name="TEXT">Tippe auf Kopf berühren oder streichle mich am Kopf!</field>
+                            <next>
+                              <block type="alpha_expression">
+                                <field name="EXPRESSION">love</field>
+                                <next>
+                                  <block type="alpha_sound">
+                                    <field name="SOUND">giggle</field>
+                                    <next>
+                                      <block type="alpha_say_mood">
+                                        <field name="TEXT">Mmmh, das kitzelt! Ich wache wieder auf!</field>
+                                        <field name="MOOD">excited</field>
+                                        <next>
+                                          <block type="alpha_action">
+                                            <field name="ACTION">standup</field>
+                                            <next>
+                                              <block type="alpha_light_effect">
+                                                <field name="EFFECT">cycle</field>
+                                                <field name="COLOR">rainbow</field>
+                                                <field name="SECONDS">3</field>
+                                                <next>
+                                                  <block type="alpha_say">
+                                                    <field name="TEXT">Hallo mein Freund! Danke fürs Streicheln!</field>
+                                                    <next>
+                                                      <block type="alpha_action">
+                                                        <field name="ACTION">010</field>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>`
     }
 };
 
 if (typeof window !== 'undefined') {
     window.ALPHA_EXAMPLES = ALPHA_EXAMPLES;
 }
+

@@ -49,6 +49,21 @@ registerGenerator('alpha_when_chest_button',
     (block) => '# Ereignis: Wenn Brustknopf gedrückt\n'
 );
 
+registerGenerator('alpha_when_head_touched',
+    (block) => `// Ereignis: Wenn Kopf berührt (${block.getFieldValue('GESTURE') || 'touch'})\n`,
+    (block) => `# Ereignis: Wenn Kopf berührt (${block.getFieldValue('GESTURE') || 'touch'})\n`
+);
+
+registerGenerator('alpha_when_person_detected',
+    (block) => '// Ereignis: Wenn jemand sich nähert (PIR-Sensor)\n',
+    (block) => '# Ereignis: Wenn jemand sich nähert (PIR-Sensor)\n'
+);
+
+registerGenerator('alpha_when_fallen',
+    (block) => '// Ereignis: Wenn Roboter umgefallen ist\n',
+    (block) => '# Ereignis: Wenn Roboter umgefallen ist\n'
+);
+
 registerGenerator('alpha_when_heard',
     (block) => `// Ereignis: Wenn gehört '${block.getFieldValue('WORD')}'\n`,
     (block) => `# Ereignis: Wenn gehört '${block.getFieldValue('WORD')}'\n`
@@ -218,4 +233,63 @@ registerGenerator('alpha_forever',
         const branch = (generator ? generator.statementToCode(block, 'DO') : '') || '    pass\n';
         return `    while True:\n${branch}`;
     }
+);
+
+
+registerGenerator('alpha_motor_move',
+    (block) => {
+        const motor = block.getFieldValue('MOTOR') || '1';
+        const angle = Number(block.getFieldValue('ANGLE')) || 90;
+        const duration = Number(block.getFieldValue('DURATION')) || 1;
+        return wait runner.highlightBlock('');\nawait runner.moveMotor(, , );\n;
+    },
+    (block) => {
+        const motor = block.getFieldValue('MOTOR') || '1';
+        const angle = Number(block.getFieldValue('ANGLE')) || 90;
+        const duration = Number(block.getFieldValue('DURATION')) || 1;
+        return     robot.move_motor(motor_id=, angle=, duration=)\n;
+    }
+);
+
+registerGenerator('alpha_motor_relax',
+    (block) => {
+        const mode = block.getFieldValue('MODE') || 'relax';
+        const unlock = mode === 'relax';
+        return wait runner.highlightBlock('');\nawait runner.relaxMotors();\n;
+    },
+    (block) => {
+        const mode = block.getFieldValue('MODE') || 'relax';
+        return     robot.set_motors_relaxed()\n;
+    }
+);
+
+registerGenerator('alpha_sensor_battery',
+    (block) => ['(await runner.getBattery())', 0],
+    (block) => ['robot.get_battery()', 0]
+);
+
+registerGenerator('alpha_sensor_charging',
+    (block) => ['(await runner.isCharging())', 0],
+    (block) => ['robot.is_charging()', 0]
+);
+
+registerGenerator('alpha_sensor_posture',
+    (block) => {
+        const posture = block.getFieldValue('POSTURE') || 'standing';
+        return [((await runner.getPosture()) === ''), 0];
+    },
+    (block) => {
+        const posture = block.getFieldValue('POSTURE') || 'standing';
+        return [(robot.get_posture() == ''), 0];
+    }
+);
+
+registerGenerator('alpha_sensor_person',
+    (block) => ['(await runner.isPersonNear())', 0],
+    (block) => ['robot.is_person_near()', 0]
+);
+
+registerGenerator('alpha_sensor_head',
+    (block) => ['(await runner.isHeadTouched())', 0],
+    (block) => ['robot.is_head_touched()', 0]
 );

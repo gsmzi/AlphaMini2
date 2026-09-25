@@ -46,6 +46,7 @@
                 <action android:name="com.ubtrobot.mini.sdkdemo.ACTION_STOP" />
                 <action android:name="com.ubtrobot.mini.sdkdemo.EXPRESSION" />
                 <action android:name="com.ubtrobot.mini.sdkdemo.LIGHT" />
+                <action android:name="com.ubtrobot.mini.sdkdemo.MOTOR" />
             </intent-filter>
         </receiver>
 

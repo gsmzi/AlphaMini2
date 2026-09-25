@@ -14,6 +14,11 @@ class AlphaSimulator {
         this.currentExpression = 'normal_1';
         this.currentLightColor = 'green';
         this.currentAction = 'idle';
+        this.posture = 'standing';
+        this.batteryLevel = 92;
+        this.isCharging = false;
+        this.personDetected = false;
+        this.headTouched = false;
         this.isSpeaking = false;
         this.audioCtx = null;
         this.synth = window.speechSynthesis;
@@ -37,6 +42,17 @@ class AlphaSimulator {
         this.speechBubble = document.getElementById('simSpeechBubble');
         this.speechText = document.getElementById('simSpeechText');
         this.actionBadge = document.getElementById('simActionBadge');
+
+        // Klick auf den Kopf des Roboters als Kopf-Sensor-Test
+        const headEl = document.querySelector('.robot-head') || document.querySelector('.head-sensor');
+        if (headEl) {
+            headEl.style.cursor = 'pointer';
+            headEl.setAttribute('title', 'Tippe hier auf den Kopf, um den Kopf-Sensor zu testen!');
+            headEl.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.triggerHeadTouch('touch');
+            });
+        }
     }
 
     initVoice() {
@@ -128,15 +144,33 @@ class AlphaSimulator {
     }
 
     setLightEffect(effect, color, seconds) {
+        if (effect === 'mouth_on') {
+            if (this.actionBadge) {
+                this.actionBadge.innerText = '👄 Mund-Licht an';
+                this.actionBadge.style.opacity = '1';
+            }
+            return;
+        }
+        if (effect === 'mouth_off') {
+            if (this.actionBadge) {
+                this.actionBadge.innerText = '👄 Mund-Licht aus';
+                this.actionBadge.style.opacity = '1';
+            }
+            return;
+        }
+
         this.setLight(color);
-        const effectClass = effect === 'blink' ? 'led-blink' : 'led-breath';
+        let effectClass = 'led-breath';
+        if (effect === 'blink') effectClass = 'led-blink';
+        else if (effect === 'cycle') effectClass = 'led-cycle';
+
         [this.leftEarLed, this.rightEarLed, this.chestLed].forEach(el => {
             if (el) el.classList.add(effectClass);
         });
 
         setTimeout(() => {
             [this.leftEarLed, this.rightEarLed, this.chestLed].forEach(el => {
-                if (el) el.classList.remove('led-blink', 'led-breath');
+                if (el) el.classList.remove('led-blink', 'led-breath', 'led-cycle');
             });
         }, seconds * 1000);
     }
@@ -303,19 +337,24 @@ class AlphaSimulator {
         this.robotAvatar.className = 'robot-body';
 
         const actionNames = {
-            '010': { name: '👋 Winken', anim: 'anim-wave' },
-            '014': { name: '💃 Tai Chi Tanz', anim: 'anim-dance' },
-            'pressup': { name: '💪 Liegestütze', anim: 'anim-pressup' },
-            '017': { name: '🙌 Beide Arme hoch', anim: 'anim-arms-up' },
-            '018': { name: '👏 Klatschen', anim: 'anim-clap' },
-            '016': { name: '🙇 Verbeugen', anim: 'anim-bow' },
-            '021': { name: '🤔 Nachdenken', anim: 'anim-think' },
-            '031': { name: '🧘 Kniebeuge', anim: 'anim-squat' },
-            'standup': { name: '🧍 Aufstehen', anim: 'anim-standup' },
-            '011': { name: '👍 Nicken', anim: 'anim-nod' }
+            '010': { name: '👋 Winken', anim: 'anim-wave', posture: 'standing' },
+            '014': { name: '💃 Tai Chi Tanz', anim: 'anim-dance', posture: 'standing' },
+            'pressup': { name: '💪 Liegestütze', anim: 'anim-pressup', posture: 'lying' },
+            '017': { name: '🙌 Beide Arme hoch', anim: 'anim-arms-up', posture: 'standing' },
+            '018': { name: '👏 Klatschen', anim: 'anim-clap', posture: 'standing' },
+            '016': { name: '🙇 Verbeugen', anim: 'anim-bow', posture: 'standing' },
+            '021': { name: '🤔 Nachdenken', anim: 'anim-think', posture: 'standing' },
+            '031': { name: '🧘 Kniebeuge', anim: 'anim-squat', posture: 'squatting' },
+            'squat': { name: '🧘 Kniebeuge', anim: 'anim-squat', posture: 'squatting' },
+            'lie_down': { name: '🛌 Hinlegen (Bauchlage)', anim: 'anim-lie-down', posture: 'lying' },
+            'standup': { name: '🧍 Aufstehen', anim: 'anim-standup', posture: 'standing' },
+            'reset_stand': { name: '🆙 Aufrecht hinstellen', anim: 'anim-standup', posture: 'standing' },
+            '011': { name: '👍 Nicken', anim: 'anim-nod', posture: 'standing' }
         };
 
-        const action = actionNames[actionId] || { name: 'Bewegung...', anim: 'anim-dance' };
+        const action = actionNames[actionId] || { name: 'Bewegung...', anim: 'anim-dance', posture: 'standing' };
+        this.posture = action.posture;
+
         if (this.actionBadge) {
             this.actionBadge.innerText = action.name;
             this.actionBadge.style.opacity = '1';
@@ -333,6 +372,91 @@ class AlphaSimulator {
         }
         if (this.actionBadge) {
             this.actionBadge.style.opacity = '0';
+        }
+    }
+
+    moveMotor(motorId, angle, durationSec = 1) {
+        if (!this.robotAvatar) return;
+        if (this.actionBadge) {
+            this.actionBadge.innerText = `🦾 Gelenk ${motorId} auf ${angle}°`;
+            this.actionBadge.style.opacity = '1';
+        }
+
+        // Visuelle Verstellung am 2D-Avatar
+        if (motorId === 1 || motorId === 2) {
+            const rArm = this.robotAvatar.querySelector('.arm.right');
+            if (rArm) rArm.style.transform = `rotate(-${angle - 40}deg)`;
+        } else if (motorId === 3 || motorId === 4) {
+            const lArm = this.robotAvatar.querySelector('.arm.left');
+            if (lArm) lArm.style.transform = `rotate(${angle - 40}deg)`;
+        } else if (motorId === 11 || motorId === 13) {
+            const head = this.robotAvatar.querySelector('.robot-head');
+            if (head) head.style.transform = `rotate(${angle - 120}deg)`;
+        }
+    }
+
+    relaxMotors(unlock = true) {
+        if (!this.robotAvatar) return;
+        if (unlock) {
+            this.robotAvatar.classList.add('anim-relax-motors');
+            if (this.actionBadge) {
+                this.actionBadge.innerText = '🪶 Gelenke entspannt (Teach-In)';
+                this.actionBadge.style.opacity = '1';
+            }
+        } else {
+            this.robotAvatar.classList.remove('anim-relax-motors');
+            const rArm = this.robotAvatar.querySelector('.arm.right');
+            const lArm = this.robotAvatar.querySelector('.arm.left');
+            const head = this.robotAvatar.querySelector('.robot-head');
+            if (rArm) rArm.style.transform = '';
+            if (lArm) lArm.style.transform = '';
+            if (head) head.style.transform = '';
+            if (this.actionBadge) {
+                this.actionBadge.innerText = '🦾 Gelenke gespannt';
+                this.actionBadge.style.opacity = '1';
+            }
+        }
+    }
+
+    triggerHeadTouch(gesture = 'touch') {
+        this.headTouched = true;
+        this.playSound('beep');
+        this.setExpression('emo_007');
+        if (this.actionBadge) {
+            this.actionBadge.innerText = '💆 Kopf gestreichelt!';
+            this.actionBadge.style.opacity = '1';
+        }
+        setTimeout(() => {
+            this.headTouched = false;
+            if (this.actionBadge && this.actionBadge.innerText === '💆 Kopf gestreichelt!') {
+                this.actionBadge.style.opacity = '0';
+            }
+        }, 2200);
+    }
+
+    triggerPersonDetected() {
+        this.personDetected = true;
+        this.playSound('beep');
+        this.setExpression('emo_008');
+        if (this.actionBadge) {
+            this.actionBadge.innerText = '🚶 Person nähert sich (PIR)!';
+            this.actionBadge.style.opacity = '1';
+        }
+        setTimeout(() => {
+            this.personDetected = false;
+            if (this.actionBadge && this.actionBadge.innerText === '🚶 Person nähert sich (PIR)!') {
+                this.actionBadge.style.opacity = '0';
+            }
+        }, 2500);
+    }
+
+    triggerFallen() {
+        this.posture = 'lying';
+        this.playAction('lie_down');
+        this.setExpression('emo_014');
+        if (this.actionBadge) {
+            this.actionBadge.innerText = '💥 Roboter umgefallen!';
+            this.actionBadge.style.opacity = '1';
         }
     }
 

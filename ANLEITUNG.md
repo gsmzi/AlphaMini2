@@ -112,8 +112,8 @@ Für den Informatikunterricht oder die Roboter-AG in der 5. Klasse gibt es die b
    ```
 3. **Im Browser programmieren:**
    - Der Webbrowser öffnet sich sofort automatisch (`http://localhost:8080`).
-   - 100% auf Deutsch mit bunten Blöcken für Sprache, Mimik, Tanzen, Lichter und Schleifen.
-   - **Mit virtuellem Simulator:** Jeder Schüler kann am eigenen PC/Tablet tüfteln und das Verhalten vorab testen.
+   - 100% auf Deutsch mit bunten Blöcken für Sprache, Mimik, Tanzen, Gelenkmotoren, Sensoren (Kopf-Touch, Infrarot-Näherung, Akku, Lagesensor) und Schleifen.
+   - **Mit virtuellem Simulator & Sensortasten:** Jeder Schüler kann am eigenen PC/Tablet tüfteln und das Verhalten vorab testen (inklusive interaktivem Kopfstreicheln und Umwerfen im Simulator).
    - **Live am Roboter:** Über die "Grüne Flagge" läuft der Code direkt auf dem echten Alpha Mini!
 4. **Unterrichtsmaterial:**
    - Fertige Aufgaben und Kopiervorlagen findest du in der Datei:

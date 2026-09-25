@@ -22,6 +22,7 @@ import com.ubtrobot.transport.message.Request
 import com.ubtrobot.transport.message.Response
 import com.ubtrobot.transport.message.ResponseCallback
 import ubtechinc.com.standupsdk.StandUpApi
+import com.ubtrobot.motor.MotorApi
 
 class BootReceiver : BroadcastReceiver() {
     companion object {
@@ -33,6 +34,7 @@ class BootReceiver : BroadcastReceiver() {
         const val ACTION_STOP = "com.ubtrobot.mini.sdkdemo.ACTION_STOP"
         const val ACTION_EXPRESSION = "com.ubtrobot.mini.sdkdemo.EXPRESSION"
         const val ACTION_LIGHT = "com.ubtrobot.mini.sdkdemo.LIGHT"
+        const val ACTION_MOTOR = "com.ubtrobot.mini.sdkdemo.MOTOR"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -133,6 +135,21 @@ class BootReceiver : BroadcastReceiver() {
                                 override fun onFailure(p0: Request?, p1: CallException?) { Log.e(TAG, "standup failed: ${p1?.message}") }
                             })
                         }
+                        "squat", "squatdown" -> {
+                            StandUpApi.getInstance().squatdown(object : ResponseCallback {
+                                override fun onResponse(p0: Request?, p1: Response?) { Log.d(TAG, "squatdown success") }
+                                override fun onFailure(p0: Request?, p1: CallException?) { Log.e(TAG, "squatdown failed: ${p1?.message}") }
+                            })
+                        }
+                        "reset_stand" -> {
+                            StandUpApi.getInstance().resetIsNotHead(object : ResponseCallback {
+                                override fun onResponse(p0: Request?, p1: Response?) { Log.d(TAG, "resetIsNotHead success") }
+                                override fun onFailure(p0: Request?, p1: CallException?) { Log.e(TAG, "resetIsNotHead failed: ${p1?.message}") }
+                            })
+                        }
+                        "lie_down" -> {
+                            ActionApi.get().playAction("031", ResourcePolicy.Exclusive, null)
+                        }
                         else -> {
                             ActionApi.get().playAction(actId, ResourcePolicy.Exclusive, object : ResponseListener<Void> {
                                 override fun onResponseSuccess(aVoid: Void?) { Log.d(TAG, "action success: $actId") }
@@ -168,7 +185,9 @@ class BootReceiver : BroadcastReceiver() {
             }
             ACTION_LIGHT -> {
                 val color = intent.getStringExtra("color") ?: "green"
-                Log.d(TAG, "LIGHT received: $color")
+                val effect = intent.getStringExtra("effect") ?: "normal"
+                val duration = intent.getIntExtra("duration", 3000)
+                Log.d(TAG, "LIGHT received: color=$color, effect=$effect, duration=$duration")
                 try {
                     val rgb = when (color.lowercase()) {
                         "blue" -> ColorUtil.rgbColor(0, 180, 255)
@@ -180,9 +199,43 @@ class BootReceiver : BroadcastReceiver() {
                         else -> ColorUtil.rgbColor(0, 255, 100) // green default
                     }
                     val ids = listOf(0, 1, 2, 3, 4, 5, 6, 7)
-                    LightApi.getInstance().normalEffect(ids, rgb, 3000, false)
+                    when (effect.lowercase()) {
+                        "breath" -> LightApi.getInstance().breathEffect(ids, rgb, 1500, duration, false)
+                        "cycle" -> LightApi.getInstance().cycleEffect(ids, rgb, 200, 100, duration, false)
+                        "mouth_on" -> LightApi.getInstance().mouthOn(255)
+                        "mouth_off" -> LightApi.getInstance().mouthOff()
+                        else -> LightApi.getInstance().normalEffect(ids, rgb, duration, false)
+                    }
                 } catch (e: Exception) {
                     Log.e(TAG, "Error setting light: ${e.message}", e)
+                }
+            }
+            ACTION_MOTOR -> {
+                val motorId = intent.getIntExtra("motor_id", 1)
+                val angle = intent.getIntExtra("angle", 120)
+                val duration = intent.getIntExtra("duration", 1000)
+                val unlock = intent.getBooleanExtra("unlock", false)
+                Log.d(TAG, "MOTOR received: motorId=$motorId, angle=$angle, duration=$duration, unlock=$unlock")
+                try {
+                    if (unlock) {
+                        if (motorId <= 0) {
+                            for (id in 1..14) {
+                                MotorApi.get().unlockMotor(id, null)
+                            }
+                        } else {
+                            MotorApi.get().unlockMotor(motorId, null)
+                        }
+                    } else {
+                        if (motorId <= 0) {
+                            for (id in 1..14) {
+                                MotorApi.get().lockMotor(id, null)
+                            }
+                        } else {
+                            MotorApi.get().moveToAbsoluteAngle(motorId, angle, duration, ResourcePolicy.Exclusive, null)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error in motor control: ${e.message}", e)
                 }
             }
         }

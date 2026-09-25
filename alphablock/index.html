@@ -33,6 +33,7 @@
                 <option value="fitness">🤸 4. Roboter-Gymnastik</option>
                 <option value="traffic_light">🚦 5. Das Ampel-Spiel</option>
                 <option value="emotions">🎭 6. Gefühle-Theater</option>
+                <option value="pet">🐱 7. Roboter-Haustier & Sensoren</option>
             </select>
 
             <!-- Datei-Aktionen -->
@@ -189,6 +190,15 @@
 
                 <!-- Aktions-Badge (z.B. "Tanzen...", "Laufe 2 Schritte") -->
                 <div class="action-badge" id="simActionBadge">Aktion</div>
+            </div>
+
+            <!-- Interaktive Sensor-Testleiste für Schüler -->
+            <div class="sensor-test-bar" title="Hier kannst du Sensoren im Simulator ausprobieren!">
+                <span class="sensor-bar-title">Sensoren:</span>
+                <button class="sensor-btn" id="btnSimHead" title="Simuliert das Berühren / Streicheln des Kopfes">💆 Kopf berühren</button>
+                <button class="sensor-btn" id="btnSimPerson" title="Simuliert, dass eine Person vor den Roboter tritt">🚶 Person nähert sich</button>
+                <button class="sensor-btn" id="btnSimFall" title="Simuliert, dass der Roboter umgestoßen wurde">💥 Umwerfen</button>
+                <button class="sensor-btn" id="btnSimStand" title="Richtet den Roboter wieder auf">🧍 Aufrichten</button>
             </div>
         </aside>
 
