@@ -165,6 +165,7 @@ class AlphaSimulator {
 
             this.synth.cancel(); // Stop any pending utterance
             const utterance = new SpeechSynthesisUtterance(text);
+            window._lastSpeechUtterance = utterance; // Chromium GC fix: prevent utterance from being garbage collected
             utterance.lang = 'de-DE';
             if (this.germanVoice) utterance.voice = this.germanVoice;
 
@@ -190,17 +191,29 @@ class AlphaSimulator {
                 utterance.rate = 1.0;
             }
 
-            utterance.onend = () => {
+            let finished = false;
+            let safetyTimer = null;
+            const done = () => {
+                if (finished) return;
+                finished = true;
+                if (safetyTimer) clearTimeout(safetyTimer);
                 this.stopSpeaking();
                 resolve();
             };
 
-            utterance.onerror = () => {
-                this.stopSpeaking();
-                resolve();
-            };
+            // Sicherheits-Timeout (falls Chrome onend nicht feuert)
+            const maxDurationMs = Math.max(2000, text.length * 150 + 1000);
+            safetyTimer = setTimeout(done, maxDurationMs);
 
-            this.synth.speak(utterance);
+            utterance.onend = done;
+            utterance.onerror = done;
+
+            try {
+                this.synth.speak(utterance);
+            } catch (e) {
+                console.warn('[Simulator] Speech synthesis fehlgeschlagen:', e);
+                done();
+            }
         });
     }
 

@@ -77,6 +77,23 @@ class AlphaExecutor {
         }
     }
 
+    async sendRobotCommand(endpoint, data = {}) {
+        if (this.mode !== 'robot') return;
+        try {
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 6000);
+            await fetch(`${this.apiBase}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+                signal: controller.signal
+            });
+            clearTimeout(timer);
+        } catch (err) {
+            console.warn(`[Executor] Roboter-Befehl an ${endpoint} fehlgeschlagen:`, err);
+        }
+    }
+
     // ==========================================
     // BEFEHLE (SIMULATOR & ECHTER ROBOTER)
     // ==========================================
@@ -91,15 +108,7 @@ class AlphaExecutor {
 
         // 2. Falls echter Roboter aktiv: HTTP-Befehl senden
         if (isRobotMode) {
-            try {
-                await fetch(`${this.apiBase}/api/robot/say`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text, mood })
-                });
-            } catch (err) {
-                console.warn('[Executor] Roboter-Sprachbefehl fehlgeschlagen:', err);
-            }
+            await this.sendRobotCommand('/api/robot/say', { text, mood });
         }
 
         await simPromise;
@@ -118,17 +127,7 @@ class AlphaExecutor {
         const simPromise = this.simulator.walk(direction, steps);
 
         // 2. Falls echter Roboter aktiv: HTTP-Befehl senden
-        if (this.mode === 'robot') {
-            try {
-                await fetch(`${this.apiBase}/api/robot/walk`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ direction, steps })
-                });
-            } catch (err) {
-                console.warn('[Executor] Roboter-Laufbefehl fehlgeschlagen:', err);
-            }
-        }
+        await this.sendRobotCommand('/api/robot/walk', { direction, steps });
 
         await simPromise;
     }
@@ -140,17 +139,7 @@ class AlphaExecutor {
         const simPromise = this.simulator.turn(direction, steps);
 
         // 2. Falls echter Roboter aktiv: HTTP-Befehl senden
-        if (this.mode === 'robot') {
-            try {
-                await fetch(`${this.apiBase}/api/robot/turn`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ direction, steps })
-                });
-            } catch (err) {
-                console.warn('[Executor] Roboter-Drehbefehl fehlgeschlagen:', err);
-            }
-        }
+        await this.sendRobotCommand('/api/robot/turn', { direction, steps });
 
         await simPromise;
     }
@@ -160,17 +149,7 @@ class AlphaExecutor {
 
         this.simulator.playAction(actionId);
 
-        if (this.mode === 'robot') {
-            try {
-                await fetch(`${this.apiBase}/api/robot/action`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: actionId })
-                });
-            } catch (err) {
-                console.warn('[Executor] Roboter-Aktionsbefehl fehlgeschlagen:', err);
-            }
-        }
+        await this.sendRobotCommand('/api/robot/action', { action: actionId });
 
         // Warte je nach Aktion eine sinnvolle Zeit
         const actionDurations = {
@@ -190,13 +169,7 @@ class AlphaExecutor {
 
     async stopAction() {
         this.simulator.stopAction();
-        if (this.mode === 'robot') {
-            try {
-                await fetch(`${this.apiBase}/api/robot/stop`, { method: 'POST' });
-            } catch (err) {
-                console.warn('[Executor] Roboter-Stopp fehlgeschlagen:', err);
-            }
-        }
+        await this.sendRobotCommand('/api/robot/stop');
     }
 
     async turnHead(direction) {
@@ -209,17 +182,7 @@ class AlphaExecutor {
         if (this.shouldStop) return;
         this.simulator.setExpression(expr);
 
-        if (this.mode === 'robot') {
-            try {
-                await fetch(`${this.apiBase}/api/robot/express`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ expression: expr })
-                });
-            } catch (err) {
-                console.warn('[Executor] Roboter-Mimik fehlgeschlagen:', err);
-            }
-        }
+        await this.sendRobotCommand('/api/robot/express', { expression: expr });
         await this.delay(200);
     }
 
@@ -227,18 +190,10 @@ class AlphaExecutor {
         if (this.shouldStop) return;
         this.simulator.setLight(color);
 
-        if (this.mode === 'robot') {
-            try {
-                await fetch(`${this.apiBase}/api/robot/light`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ color })
-                });
-            } catch (err) {
-                console.warn('[Executor] Roboter-Licht fehlgeschlagen:', err);
-            }
-        }
+        await this.sendRobotCommand('/api/robot/light', { color });
+        await this.delay(200);
     }
+
 
     async lightEffect(effect, color, seconds) {
         if (this.shouldStop) return;
