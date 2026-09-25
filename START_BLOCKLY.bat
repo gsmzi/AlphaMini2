@@ -76,6 +76,16 @@ for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "(Get-ItemProp
 )
 if defined PYTHON_CMD goto PYTHON_FOUND
 
+REM 7. Suche in installierten Programmen mit vollwertigem Python (z.B. LibreOffice, FreeCAD)
+if exist "%ProgramFiles%\LibreOffice\program\python.exe" (
+    set "PYTHON_CMD=%ProgramFiles%\LibreOffice\program\python.exe"
+    goto PYTHON_FOUND
+)
+if exist "%ProgramFiles%\FreeCAD 0.21\bin\python.exe" (
+    set "PYTHON_CMD=%ProgramFiles%\FreeCAD 0.21\bin\python.exe"
+    goto PYTHON_FOUND
+)
+
 :PYTHON_NOT_FOUND
 echo.
 echo ============================================================================

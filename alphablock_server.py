@@ -48,6 +48,8 @@ def find_adb():
 
 ADB_PATH = find_adb()
 
+WIN32_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
+
 class RobotBridge:
     """Kommunikations-Brücke zum Alpha Mini Roboter über ADB"""
 
@@ -59,16 +61,16 @@ class RobotBridge:
                 [ADB_PATH, "devices"],
                 capture_output=True,
                 text=True,
-                timeout=3
+                creationflags=WIN32_NO_WINDOW,
+                timeout=6
             )
-            lines = result.stdout.strip().splitlines()
             devices = []
-            for line in lines[1:]:
+            for line in result.stdout.strip().splitlines():
                 parts = line.split()
                 if len(parts) >= 2 and parts[1] == "device":
                     devices.append(parts[0])
             return devices
-        except Exception as e:
+        except Exception:
             return []
 
     @staticmethod
@@ -81,7 +83,7 @@ class RobotBridge:
         """Führt einen ADB shell Befehl auf dem ersten verbundenen Gerät aus"""
         try:
             cmd = [ADB_PATH, "shell"] + command_args
-            res = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            res = subprocess.run(cmd, capture_output=True, text=True, creationflags=WIN32_NO_WINDOW, timeout=6)
             return res.returncode == 0, res.stdout
         except Exception as e:
             return False, str(e)
