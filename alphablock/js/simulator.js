@@ -144,7 +144,7 @@ class AlphaSimulator {
     // ==========================================
     // 🗣️ SPRACHAUSGABE & SPRECHBLASE
     // ==========================================
-    async speak(text, mood = 'normal') {
+    async speak(text, mood = 'normal', playAudio = true) {
         return new Promise(resolve => {
             if (this.speechBubble && this.speechText) {
                 this.speechText.innerText = text;
@@ -155,7 +155,7 @@ class AlphaSimulator {
                 this.robotAvatar.classList.add('speaking');
             }
 
-            if (!this.synth) {
+            if (!playAudio || !this.synth) {
                 setTimeout(() => {
                     this.stopSpeaking();
                     resolve();

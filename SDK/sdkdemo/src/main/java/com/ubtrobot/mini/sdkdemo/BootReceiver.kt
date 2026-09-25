@@ -8,12 +8,17 @@ import android.util.Log
 import com.ubtrobot.action.ActionApi
 import com.ubtrobot.action.ActionExApi
 import com.ubtrobot.action.listeners.ActionExListener
+import com.ubtrobot.commons.ResponseListener
 import com.ubtrobot.express.ExpressApi
 import com.ubtrobot.led.ColorUtil
 import com.ubtrobot.led.LightApi
 import com.ubtrobot.master.component.ResourcePolicy
 import com.ubtrobot.mini.sdkdemo.voicedialogue.VoiceDialogueService
 import com.ubtrobot.mini.sdkdemo.voicedialogue.VoiceDialogueActivityV3
+import com.ubtrobot.transport.message.CallException
+import com.ubtrobot.transport.message.Request
+import com.ubtrobot.transport.message.Response
+import com.ubtrobot.transport.message.ResponseCallback
 import ubtechinc.com.standupsdk.StandUpApi
 
 class BootReceiver : BroadcastReceiver() {
@@ -66,7 +71,7 @@ class BootReceiver : BroadcastReceiver() {
                     override fun onActonStarted() { Log.d(TAG, "walk started") }
                     override fun onActionProgress(current: Int, total: Int) { Log.d(TAG, "walk progress: $current/$total") }
                     override fun onActionCompleted() { Log.d(TAG, "walk completed") }
-                    override fun onActionFailure(code: Int, msg: String?) { Log.e(TAG, "walk failure: $code $msg") }
+                    override fun onActionFailure(code: Int, msg: String) { Log.e(TAG, "walk failure: $code $msg") }
                 }
                 try {
                     if (direction.equals("backward", ignoreCase = true)) {
@@ -86,7 +91,7 @@ class BootReceiver : BroadcastReceiver() {
                     override fun onActonStarted() { Log.d(TAG, "turn started") }
                     override fun onActionProgress(current: Int, total: Int) { Log.d(TAG, "turn progress: $current/$total") }
                     override fun onActionCompleted() { Log.d(TAG, "turn completed") }
-                    override fun onActionFailure(code: Int, msg: String?) { Log.e(TAG, "turn failure: $code $msg") }
+                    override fun onActionFailure(code: Int, msg: String) { Log.e(TAG, "turn failure: $code $msg") }
                 }
                 try {
                     if (direction.equals("right", ignoreCase = true)) {
@@ -104,13 +109,25 @@ class BootReceiver : BroadcastReceiver() {
                 try {
                     when (actId) {
                         "pressup" -> {
-                            ActionExApi.get().makePressUps(3, ResourcePolicy.Exclusive, null)
+                            val pushUpListener = object : ActionExListener {
+                                override fun onActonStarted() { Log.d(TAG, "pressups started") }
+                                override fun onActionProgress(current: Int, total: Int) { Log.d(TAG, "pressups progress: $current/$total") }
+                                override fun onActionCompleted() { Log.d(TAG, "pressups completed") }
+                                override fun onActionFailure(code: Int, msg: String) { Log.e(TAG, "pressups failure: $code $msg") }
+                            }
+                            ActionExApi.get().makePressUps(3, ResourcePolicy.Exclusive, pushUpListener)
                         }
                         "standup" -> {
-                            StandUpApi.getInstance().standUp(null)
+                            StandUpApi.getInstance().standUp(object : ResponseCallback {
+                                override fun onResponse(p0: Request?, p1: Response?) { Log.d(TAG, "standup success") }
+                                override fun onFailure(p0: Request?, p1: CallException?) { Log.e(TAG, "standup failed: ${p1?.message}") }
+                            })
                         }
                         else -> {
-                            ActionApi.get().playAction(actId, ResourcePolicy.Exclusive, null)
+                            ActionApi.get().playAction(actId, ResourcePolicy.Exclusive, object : ResponseListener<Void> {
+                                override fun onResponseSuccess(aVoid: Void?) { Log.d(TAG, "action success: $actId") }
+                                override fun onFailure(code: Int, msg: String) { Log.e(TAG, "action failure: $code $msg") }
+                            })
                         }
                     }
                 } catch (e: Exception) {

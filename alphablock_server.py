@@ -96,6 +96,7 @@ class RobotBridge:
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.SPEAK_TEST",
+            "-p", "com.ubtrobot.mini.sdkdemo",
             "--es", "text", text
         ]
         ok, out = RobotBridge.run_adb_shell(cmd)
@@ -116,6 +117,7 @@ class RobotBridge:
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.WALK",
+            "-p", "com.ubtrobot.mini.sdkdemo",
             "--es", "direction", direction,
             "--ei", "steps", str(steps)
         ]
@@ -129,6 +131,7 @@ class RobotBridge:
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.TURN",
+            "-p", "com.ubtrobot.mini.sdkdemo",
             "--es", "direction", direction,
             "--ei", "steps", str(steps)
         ]
@@ -143,6 +146,7 @@ class RobotBridge:
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.ACTION",
+            "-p", "com.ubtrobot.mini.sdkdemo",
             "--es", "action", action_id
         ]
         RobotBridge.run_adb_shell(cmd)
@@ -154,7 +158,8 @@ class RobotBridge:
         print("[Roboter] 🛑 Stoppe Bewegung", flush=True)
         cmd = [
             "am", "broadcast",
-            "-a", "com.ubtrobot.mini.sdkdemo.ACTION_STOP"
+            "-a", "com.ubtrobot.mini.sdkdemo.ACTION_STOP",
+            "-p", "com.ubtrobot.mini.sdkdemo"
         ]
         RobotBridge.run_adb_shell(cmd)
         return True
@@ -166,6 +171,7 @@ class RobotBridge:
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.EXPRESSION",
+            "-p", "com.ubtrobot.mini.sdkdemo",
             "--es", "expression", expression_id
         ]
         RobotBridge.run_adb_shell(cmd)
@@ -178,6 +184,7 @@ class RobotBridge:
         cmd = [
             "am", "broadcast",
             "-a", "com.ubtrobot.mini.sdkdemo.LIGHT",
+            "-p", "com.ubtrobot.mini.sdkdemo",
             "--es", "color", color
         ]
         RobotBridge.run_adb_shell(cmd)

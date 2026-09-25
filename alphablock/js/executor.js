@@ -84,11 +84,13 @@ class AlphaExecutor {
     async say(text, mood = 'normal') {
         if (this.shouldStop) return;
 
-        // 1. Immer im Simulator anzeigen/sprechen
-        const simPromise = this.simulator.speak(text, mood);
+        const isRobotMode = (this.mode === 'robot');
+
+        // 1. Im Simulator anzeigen (Audio nur am PC abspielen, wenn nicht im Roboter-Modus)
+        const simPromise = this.simulator.speak(text, mood, !isRobotMode);
 
         // 2. Falls echter Roboter aktiv: HTTP-Befehl senden
-        if (this.mode === 'robot') {
+        if (isRobotMode) {
             try {
                 await fetch(`${this.apiBase}/api/robot/say`, {
                     method: 'POST',

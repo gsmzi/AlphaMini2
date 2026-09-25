@@ -15,6 +15,8 @@ if exist "%PROJECT_DIR%..\tools\scrcpy\adb.exe" (
 )
 if exist "C:\Program Files\Android\Android Studio\jbr" (
     set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
+) else if not defined JAVA_HOME (
+    for /d %%D in ("C:\Program Files\Eclipse Adoptium\jdk-17*") do set "JAVA_HOME=%%D"
 )
 
 echo ========================================
