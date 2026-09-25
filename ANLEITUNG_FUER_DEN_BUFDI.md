@@ -22,7 +22,7 @@ Offiziell verlangt der Hersteller bei der Ersteinrichtung über die Smartphone-A
    * Das Bildschirmübertragungs-Tool **`scrcpy`** und die Android-Schnittstelle **`adb`** liegen fertig eingerichtet im Ordner `tools\scrcpy\`.
 2. **Die fertige Steuerungs-App liegt bereit:**
    * Die Datei **`sdkdemo-debug.apk`** liegt bereits fertig kompiliert im Hauptordner (enthält die Offline-Spracherkennung für Deutsch & Englisch, Roboter-Mimik und Tanz-/Bewegungssteuerungen).
-   * Online-Download (falls nötig): https://github.com/gsmzi/AlphaMini2/releases/tag/latest
+   * Online-Download (falls nötig): https://github.com/gsmzi/AlphaMini2/releases/download/latest/sdkdemo-debug.apk
 
 ---
 

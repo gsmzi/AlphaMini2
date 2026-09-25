@@ -35,6 +35,28 @@ if exist "%SCRIPT_DIR%SDK\sdkdemo\build\outputs\apk\debug\sdkdemo-debug.apk" (
     goto FOUND_APK
 )
 
+REM 3. Automatischer Download von GitHub, falls lokal noch nicht vorhanden
+echo Keine lokale APK gefunden. Versuche automatischen Download von GitHub...
+set "DOWNLOAD_URL=https://github.com/gsmzi/AlphaMini2/releases/download/latest/sdkdemo-debug.apk"
+set "DOWNLOAD_TARGET=%SCRIPT_DIR%sdkdemo-debug.apk"
+
+where curl.exe >nul 2>&1
+if not errorlevel 1 (
+    echo [Download] Lade sdkdemo-debug.apk herunter (ca. 200 MB)...
+    curl.exe -L --progress-bar -f -o "%DOWNLOAD_TARGET%" "%DOWNLOAD_URL%"
+)
+
+if not exist "%DOWNLOAD_TARGET%" (
+    echo [Download] Lade sdkdemo-debug.apk via PowerShell herunter...
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object System.Net.WebClient).DownloadFile('%DOWNLOAD_URL%', '%DOWNLOAD_TARGET%')" >nul 2>&1
+)
+
+if exist "%DOWNLOAD_TARGET%" (
+    set "APK_FILE=%DOWNLOAD_TARGET%"
+    echo [OK] Automatisch heruntergeladen!
+    goto FOUND_APK
+)
+
 :FOUND_APK
 if "%APK_FILE%"=="" goto ERR_NO_APK
 
@@ -90,7 +112,7 @@ exit /b 1
 
 :ERR_NO_ROBOT
 popd
-echo [!] Kein Roboter ueber USB erkannt.
+echo [WARNUNG] Kein Roboter ueber USB erkannt.
 echo Bitte schliesse den Roboter per USB an und schalte ihn ein.
 echo.
 pause
@@ -99,16 +121,16 @@ exit /b 1
 :ERR_NO_APK
 popd
 echo.
-echo [!] Keine APK-Datei gefunden!
+echo [FEHLER] Keine APK-Datei gefunden und automatischer Download nicht moeglich!
 echo.
-echo So geht es:
-echo 1. Lade die Datei "sdkdemo-debug.apk" herunter von:
-echo    https://github.com/gsmzi/AlphaMini2/releases/tag/latest
-echo 2. Kopiere die .apk-Datei einfach hier in diesen Hauptordner.
+echo So kannst du die Datei manuell herunterladen:
+echo 1. Direkter Download-Link der APK:
+echo    https://github.com/gsmzi/AlphaMini2/releases/download/latest/sdkdemo-debug.apk
+echo 2. Kopiere die heruntergeladene Datei "sdkdemo-debug.apk" in diesen Hauptordner.
 echo 3. Starte dieses Skript erneut!
 echo.
-echo TIPP: Du kannst jede .apk-Datei auch einfach per Drag and Drop
-echo direkt in das geoeffnete scrcpy-Bildschirmfenster ziehen!
+echo TIPP: Du kannst die heruntergeladene .apk-Datei auch einfach per Drag and Drop
+echo direkt in das geoeffnete scrcpy-Bildschirmfenster des Roboters ziehen!
 echo.
 pause
 exit /b 1

@@ -24,6 +24,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Set up Android SDK Path
+        run: |
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+
       - name: Install NDK and CMake
         run: |
           yes | sdkmanager --licenses || true
@@ -49,6 +54,7 @@ jobs:
         with:
           tag_name: latest
           name: "Alpha Mini 2 - Aktuelle APK"
+          make_latest: true
           body: |
             Automatisch erstellte Installations-APK für den UBTECH Alpha Mini 2.
 
