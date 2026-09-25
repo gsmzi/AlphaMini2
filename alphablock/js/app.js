@@ -162,8 +162,36 @@ window.addEventListener('DOMContentLoaded', () => {
 // UI-LISTENER & BUTTONS
 // ==========================================
 function setupUIListeners() {
+    // 🖥️ Modus Switch (Simulator vs Roboter)
+    const modeSelect = document.getElementById('modeSelect');
+    const notice = document.getElementById('robotModeNotice');
+
+    const updateMode = (mode) => {
+        executor.setMode(mode);
+        if (notice) {
+            notice.style.display = mode === 'robot' ? 'block' : 'none';
+        }
+        console.log('[App] Aktiver Ausführungsmodus:', mode);
+    };
+
+    if (modeSelect) {
+        // Sofort beim Start mit dem Dropdown synchronisieren
+        updateMode(modeSelect.value);
+
+        modeSelect.addEventListener('change', (e) => {
+            const mode = e.target.value;
+            if (mode === 'simulator') {
+                window._userManualSimulator = true;
+            }
+            updateMode(mode);
+        });
+    }
+
     // 🚩 Start
     document.getElementById('btnStart').addEventListener('click', () => {
+        if (modeSelect) {
+            updateMode(modeSelect.value);
+        }
         executor.run();
     });
 
@@ -171,19 +199,6 @@ function setupUIListeners() {
     document.getElementById('btnStop').addEventListener('click', () => {
         executor.stop();
     });
-
-    // 🖥️ Modus Switch (Simulator vs Roboter)
-    const modeSelect = document.getElementById('modeSelect');
-    if (modeSelect) {
-        modeSelect.addEventListener('change', (e) => {
-            const mode = e.target.value;
-            executor.setMode(mode);
-            const notice = document.getElementById('robotModeNotice');
-            if (notice) {
-                notice.style.display = mode === 'robot' ? 'block' : 'none';
-            }
-        });
-    }
 
     // 💾 Speichern
     document.getElementById('btnSave').addEventListener('click', () => {
@@ -295,6 +310,15 @@ async function checkRobotConnection() {
             if (data.connected) {
                 statusDot.className = 'status-dot online';
                 statusText.innerText = `Roboter verbunden (${data.device_id || 'USB/WLAN'})`;
+
+                const modeSelect = document.getElementById('modeSelect');
+                const notice = document.getElementById('robotModeNotice');
+                if (modeSelect && !window._userManualSimulator && modeSelect.value !== 'robot') {
+                    modeSelect.value = 'robot';
+                    if (executor) executor.setMode('robot');
+                    if (notice) notice.style.display = 'block';
+                    console.log('[App] Roboter verbunden -> Automatisch auf Roboter-Modus gewechselt');
+                }
                 return;
             }
         }
