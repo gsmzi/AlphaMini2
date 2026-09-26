@@ -31,9 +31,9 @@ Offiziell verlangt der Hersteller bei der Ersteinrichtung über die Smartphone-A
 1. **Rucksack öffnen:** Klappe am Rücken des Roboters öffnen (darunter befindet sich der USB-Anschluss).
 2. **Verbinden:** Schließe den Roboter mit dem mitgelieferten USB-Kabel an den PC an.
 3. **Einschalten:** Schalte den Roboter ein (Power-Taste gedrückt halten, bis er aufwacht).
-4. **Bildschirm spiegeln:** Mache im Hauptordner einen Doppelklick auf:
+4. **Roboter einstellen:** Mache im Hauptordner einen Doppelklick auf:
    ```
-   1_BILDSCHIRM_STARTEN.bat
+   1_Roboter_einstellen.bat
    ```
 5. **Ergebnis:** Es öffnet sich ein Fenster mit dem Display des Roboters. Du kannst den Roboter ab jetzt mit der Computermaus bedienen!
 
@@ -66,7 +66,7 @@ Da die Installationsdatei `sdkdemo-debug.apk` bereits im Ordner liegt, geht die 
 
 1. Doppelklick auf:
    ```
-   2_APP_INSTALLIEREN.bat
+   2_Robotersoftware_aktualisieren.bat
    ```
    *(Das Skript schiebt die App auf den Roboter und erteilt automatisch die Mikrofonberechtigung).*
 2. **Alternative:** Du kannst die Datei `sdkdemo-debug.apk` auch einfach mit gedrückter Maustaste direkt in das offene `scrcpy`-Fenster ziehen (Drag & Drop).
@@ -106,10 +106,11 @@ Für den Informatikunterricht oder die Roboter-AG in der 5. Klasse gibt es die b
    - **WICHTIG bei der Installation:** Beim Starten des Python-Installers ganz unten den Haken setzen bei:  
      `[X] Add python.exe to PATH` *(oder "Python zum Pfad hinzufügen")*.
    - *Schnellinstallation per Windows-Kommandozeile:* `winget install Python.Python.3.12`
-2. **Starten:** Doppelklick auf:
+2. **Starten:** Öffne den Ordner **`Schülerversion`** und mache einen Doppelklick auf:
    ```
-   3_SCRATCH_BLOCKLY_STARTEN.bat
+   Roboter_programmieren.bat
    ```
+   *(Tipp: Im Schülerordner liegt extra nur diese eine Datei, damit Schüler sofort wissen, was sie anklicken müssen!)*
 3. **Im Browser programmieren:**
    - Der Webbrowser öffnet sich sofort automatisch (`http://localhost:8080`).
    - 100% auf Deutsch mit bunten Blöcken für Sprache, Mimik, Tanzen, Gelenkmotoren, Sensoren (Kopf-Touch, Infrarot-Näherung, Akku, Lagesensor) und Schleifen.
@@ -117,16 +118,16 @@ Für den Informatikunterricht oder die Roboter-AG in der 5. Klasse gibt es die b
    - **Live am Roboter:** Über die "Grüne Flagge" läuft der Code direkt auf dem echten Alpha Mini!
 4. **Unterrichtsmaterial:**
    - Fertige Aufgaben und Kopiervorlagen findest du in der Datei:
-     👉 `UNTERRICHTSMATERIAL_5_KLASSE.md`
+     👉 `UNTERRICHTSMATERIAL_5_KLASSE.md` (auch im Ordner `Schülerversion\dateien\`)
 
 ---
 
 ## ❓ Häufige Fragen & Problemlösung
 
-- **`1_BILDSCHIRM_STARTEN.bat` sagt "scrcpy nicht gefunden" oder "Befehl falsch":**
+- **`1_Roboter_einstellen.bat` sagt "scrcpy nicht gefunden" oder "Befehl falsch":**
   1. Wurde die ZIP-Datei entpackt? Falls nicht: Rechtsklick auf die ZIP &rarr; *"Alle extrahieren..."*.
   2. Die Datei muss aus dem entpackten Hauptordner gestartet werden, damit der Unterordner `tools\scrcpy\` gefunden werden kann.
-- **`3_SCRATCH_BLOCKLY_STARTEN.bat` findet Python nicht, obwohl es installiert wurde:**
+- **`Roboter_programmieren.bat` findet Python nicht, obwohl es installiert wurde:**
   1. Der Python-Installer wurde vermutlich ohne den Haken *"Add python.exe to PATH"* ausgeführt.
   2. Lösung: Lade die Installationsdatei von python.org erneut herunter bzw. öffne sie, wähle **"Modify"** und aktiviere den Haken `[X] Add python.exe to PATH`.
   3. Starte das Skript danach erneut (das Skript sucht automatisch in `py -3`, PATH, AppData, Program Files und der Windows-Registry).
@@ -134,7 +135,7 @@ Für den Informatikunterricht oder die Roboter-AG in der 5. Klasse gibt es die b
   Nein! Sobald Sprache, WLAN und die App V3 eingerichtet sind, läuft alles eigenständig auf dem Roboter. Der PC wird nur für die Ersteinrichtung per USB gebraucht.
 - **Warum höre ich keinen Ton aus dem PC?**
   Das ist Absicht (`--no-audio`): Der Ton soll aus den Lautsprechern des Alpha Mini kommen und nicht über den PC geleitet werden, da sonst das Mikrofon gestört werden könnte.
-- **`1_BILDSCHIRM_STARTEN.bat` sagt "Kein Roboter erkannt":**
+- **`1_Roboter_einstellen.bat` sagt "Kein Roboter erkannt":**
   1. Prüfen, ob das USB-Kabel wirklich fest in der Buchse am Rücken sitzt.
   2. Prüfen, ob der Roboter eingeschaltet ist (Augen leuchten).
   3. Einen anderen USB-Port am PC ausprobieren.

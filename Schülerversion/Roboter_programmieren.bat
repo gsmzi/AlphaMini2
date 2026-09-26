@@ -1,9 +1,9 @@
 @echo off
 setlocal EnableDelayedExpansion
 chcp 65001 >nul
-title AlphaBlock - Scratch fuer Alpha Mini (5. Klasse)
+title AlphaBlock - Roboter programmieren (5. Klasse)
 echo ========================================================
-echo       ALPHABLOCK - SCRATCH FUER ALPHA MINI
+echo       ALPHABLOCK - ROBOTER PROGRAMMIEREN
 echo               Fuer die 5. Klasse
 echo ========================================================
 echo.
@@ -11,10 +11,10 @@ echo.
 REM Automatische Unterstuetzung fuer Netzwerkpfade (UNC wie \\Server\Freigabe)
 pushd "%~dp0"
 set "SCRIPT_DIR=%CD%\"
-cd /d "%SCRIPT_DIR%"
+set "DATA_DIR=%SCRIPT_DIR%dateien\"
 
-REM Pruefe, ob das Skript in einer unentpackten ZIP ausgefuehrt wird
-if not exist "%SCRIPT_DIR%alphablock_server.py" goto ERR_NO_SERVER
+REM Pruefe, ob der Unterordner 'dateien' mit den Programmdateien existiert
+if not exist "%DATA_DIR%alphablock_server.py" goto ERR_NO_SERVER
 
 echo [1/3] Suche nach Python 3 auf diesem PC...
 
@@ -114,9 +114,9 @@ echo.
 echo [2/3] Starte AlphaBlock Schul-Server...
 
 if "!PYTHON_CMD!"=="py -3" (
-    start "AlphaBlock Server" cmd /k "py -3 -u alphablock_server.py"
+    start "AlphaBlock Server" /d "%DATA_DIR%" cmd /k "py -3 -u alphablock_server.py"
 ) else (
-    start "AlphaBlock Server" cmd /k ""!PYTHON_CMD!" -u alphablock_server.py"
+    start "AlphaBlock Server" /d "%DATA_DIR%" cmd /k ""!PYTHON_CMD!" -u alphablock_server.py"
 )
 
 echo [3/3] Oeffne Programmierumgebung im Webbrowser...
@@ -139,13 +139,13 @@ exit /b 0
 
 :ERR_NO_SERVER
 popd
-echo [FEHLER] alphablock_server.py wurde nicht gefunden!
+echo [FEHLER] dateien\alphablock_server.py wurde nicht gefunden!
 echo.
 echo ============================================================================
 echo HINWEIS: Hast du die ZIP-Datei vor dem Start ENTPACKT?
 echo.
 echo Wenn du die Batch-Datei direkt in der ZIP-Datei oeffnest, kann Windows
-echo die benoetigten Programmdateien nicht finden.
+echo die benoetigten Programmdateien im Unterordner "dateien" nicht finden.
 echo.
 echo LOESUNG:
 echo 1. Klicke mit der RECHTEN Maustaste auf die ZIP-Datei.

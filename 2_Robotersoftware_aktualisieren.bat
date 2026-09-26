@@ -1,9 +1,10 @@
 @echo off
 setlocal EnableDelayedExpansion
 chcp 65001 >nul
-title Alpha Mini 2 - App Installation
+title Alpha Mini 2 - Robotersoftware aktualisieren (App)
 echo ========================================================
-echo       ALPHA MINI 2 - APP INSTALLATION
+echo       ALPHA MINI 2 - ROBOTERSOFTWARE AKTUALISIEREN
+echo            (App installieren & aufspielen)
 echo ========================================================
 echo.
 
@@ -77,15 +78,15 @@ if exist "%TEMP%\sdkdemo-debug.apk" del "%TEMP%\sdkdemo-debug.apk" >nul 2>&1
 
 if not "%INSTALL_STATUS%"=="0" goto ERR_INSTALL_FAILED
 
-echo [OK] App erfolgreich installiert!
+echo [OK] App erfolgreich installiert / aktualisiert!
 echo.
 echo [3/3] Berechtigungen fuer Mikrofon setzen...
 "%ADB_PATH%" shell pm grant com.ubtrobot.mini.sdkdemo android.permission.RECORD_AUDIO >nul 2>&1
 echo [OK] Mikrofon-Berechtigung erteilt.
 echo.
 echo ========================================================
-echo Fertig! Die App ist auf dem Roboter installiert.
-echo Du kannst sie nun auf dem Display des Roboters antippen!
+echo Fertig! Die Robotersoftware ist auf dem Roboter aktuell.
+echo Du kannst die App nun auf dem Roboter antippen und nutzen!
 echo ========================================================
 popd
 pause

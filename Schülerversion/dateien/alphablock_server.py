@@ -36,6 +36,7 @@ WEB_DIR = SCRIPT_DIR / "alphablock"
 ADB_CANDIDATES = [
     SCRIPT_DIR / "tools" / "scrcpy" / "adb.exe",
     SCRIPT_DIR / ".." / "tools" / "scrcpy" / "adb.exe",
+    SCRIPT_DIR / ".." / ".." / "tools" / "scrcpy" / "adb.exe",
     Path(os.environ.get("LOCALAPPDATA", "")) / "Android" / "Sdk" / "platform-tools" / "adb.exe"
 ]
 

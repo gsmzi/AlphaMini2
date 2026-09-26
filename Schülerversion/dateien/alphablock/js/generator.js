@@ -235,19 +235,18 @@ registerGenerator('alpha_forever',
     }
 );
 
-
 registerGenerator('alpha_motor_move',
     (block) => {
         const motor = block.getFieldValue('MOTOR') || '1';
         const angle = Number(block.getFieldValue('ANGLE')) || 90;
         const duration = Number(block.getFieldValue('DURATION')) || 1;
-        return wait runner.highlightBlock('');\nawait runner.moveMotor(, , );\n;
+        return `await runner.highlightBlock('${block.id}');\nawait runner.moveMotor(${motor}, ${angle}, ${duration});\n`;
     },
     (block) => {
         const motor = block.getFieldValue('MOTOR') || '1';
         const angle = Number(block.getFieldValue('ANGLE')) || 90;
         const duration = Number(block.getFieldValue('DURATION')) || 1;
-        return     robot.move_motor(motor_id=, angle=, duration=)\n;
+        return `    robot.move_motor(motor_id=${motor}, angle=${angle}, duration=${duration})\n`;
     }
 );
 
@@ -255,11 +254,12 @@ registerGenerator('alpha_motor_relax',
     (block) => {
         const mode = block.getFieldValue('MODE') || 'relax';
         const unlock = mode === 'relax';
-        return wait runner.highlightBlock('');\nawait runner.relaxMotors();\n;
+        return `await runner.highlightBlock('${block.id}');\nawait runner.relaxMotors(${unlock});\n`;
     },
     (block) => {
         const mode = block.getFieldValue('MODE') || 'relax';
-        return     robot.set_motors_relaxed()\n;
+        const unlock = mode === 'relax';
+        return `    robot.set_motors_relaxed(${unlock ? 'True' : 'False'})\n`;
     }
 );
 
@@ -276,11 +276,11 @@ registerGenerator('alpha_sensor_charging',
 registerGenerator('alpha_sensor_posture',
     (block) => {
         const posture = block.getFieldValue('POSTURE') || 'standing';
-        return [((await runner.getPosture()) === ''), 0];
+        return [`((await runner.getPosture()) === '${posture}')`, 0];
     },
     (block) => {
         const posture = block.getFieldValue('POSTURE') || 'standing';
-        return [(robot.get_posture() == ''), 0];
+        return [`(robot.get_posture() == '${posture}')`, 0];
     }
 );
 

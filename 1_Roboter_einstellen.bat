@@ -1,9 +1,10 @@
 @echo off
 setlocal EnableDelayedExpansion
 chcp 65001 >nul
-title Alpha Mini 2 - Bildschirmsteuerung (scrcpy)
+title Alpha Mini 2 - Roboter einstellen (WLAN & Sprache)
 echo ========================================================
-echo       ALPHA MINI 2 - BILDSCHIRM-STEUERUNG
+echo       ALPHA MINI 2 - ROBOTER EINSTELLEN
+echo            (Bildschirm, WLAN & Sprache)
 echo ========================================================
 echo.
 
@@ -49,7 +50,7 @@ echo Naechste Schritte am Roboter-Display:
 echo 1. Pfeil unten links anklicken, um die Apps zu sehen
 echo 2. Einstellungen (Settings) oeffnen
 echo 3. Sprache auf Deutsch umstellen
-echo 4. Mit dem heimischen WLAN verbinden
+echo 4. Mit dem Schul-/Heim-WLAN verbinden
 echo ========================================================
 echo.
 echo Dieses Fenster kann geschlossen werden.
