@@ -58,6 +58,17 @@ Offiziell verlangt der Hersteller bei der Ersteinrichtung über die Smartphone-A
 3. Gib das WLAN-Passwort über deine PC-Tastatur ein und verbinde den Roboter.
 4. **Fertig!** Der Roboter ist nun online und entsperrt.
 
+### C. Kabellosen Modus aktivieren (USB-Kabel abziehen!):
+Sobald der Roboter mit dem WLAN verbunden ist, kannst du die Steuerung auf kabellos umschalten:
+1. Mache im Hauptordner einen Doppelklick auf:
+   ```
+   ROBOTER_KABELLOS_VERBINDEN.bat
+   ```
+   *(Oder klicke im Browser in AlphaBlock oben rechts auf den blauen Button **"📶 WLAN verbinden"**).*
+2. Das System liest vollautomatisch die IP-Adresse des Roboters aus und aktiviert den WLAN-Modus.
+3. Sobald die Erfolgsmeldung erscheint: **Ziehe das USB-Kabel einfach ab!**
+4. Der Roboter lässt sich ab jetzt völlig frei und kabellos durch das Klassenzimmer bewegen und programmieren!
+
 ---
 
 ## 📱 Schritt 3: Die Sprach- & Steuerungs-App installieren

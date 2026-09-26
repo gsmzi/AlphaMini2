@@ -47,6 +47,7 @@
         </div>
 
         <div class="status-section">
+            <button id="btnWifiConnect" class="header-btn" style="background: #4361ee; color: #fff; font-weight: bold; margin-right: 8px;" title="Roboter über WLAN / kabellos verbinden">📶 WLAN verbinden</button>
             <button id="btnTestRobot" class="header-btn" style="background: #2a9d8f; color: #fff; font-weight: bold; margin-right: 8px;" title="Testet die Verbindung zum Roboter sofort (Roboter winkt)">👋 Test: Winken</button>
             <div class="status-badge" id="robotStatusBadge" title="Verbindungsstatus zum Alpha Mini Roboter">
                 <div class="status-dot offline" id="robotStatusDot"></div>
@@ -214,6 +215,38 @@
                 <button class="modal-close" id="btnCloseCode">✕</button>
             </div>
             <pre class="code-content" id="pythonCode"># Dein Code wird hier angezeigt...</pre>
+        </div>
+    </div>
+
+    <!-- Modal: Kabellose WLAN-Verbindung -->
+    <div class="modal-overlay" id="wifiModal">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <span>📶 Roboter kabellos (WLAN) verbinden</span>
+                <button class="modal-close" id="btnCloseWifi">✕</button>
+            </div>
+            <div style="padding: 20px; font-size: 14px; line-height: 1.6; color: #333;">
+                <p>Sobald WLAN auf dem Roboter eingerichtet ist, kann er <b>ohne USB-Kabel</b> gesteuert werden!</p>
+                
+                <div style="background: #f0f7ff; border-left: 4px solid #3a86ff; padding: 12px; margin: 15px 0; border-radius: 4px;">
+                    <b>Option 1: Automatisch (Empfohlen)</b><br>
+                    Roboter kurz mit dem USB-Kabel verbinden und auf den Button klicken. Das System aktiviert den WLAN-Modus automatisch!
+                    <div style="margin-top: 10px;">
+                        <button id="btnAutoWifiConnect" class="header-btn" style="background: #3a86ff; color: #fff; padding: 8px 16px; font-weight: bold; width: 100%;">⚡ Jetzt auf kabellos umschalten</button>
+                    </div>
+                </div>
+
+                <div style="background: #f8f9fa; border-left: 4px solid #6c757d; padding: 12px; margin: 15px 0; border-radius: 4px;">
+                    <b>Option 2: Manuell über IP-Adresse</b><br>
+                    Falls das USB-Kabel schon abgezogen ist (IP steht auf dem Roboter unter <i>Einstellungen &rarr; WLAN</i>):
+                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                        <input type="text" id="manualIpInput" placeholder="z. B. 192.168.1.145" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px;">
+                        <button id="btnManualWifiConnect" class="header-btn" style="background: #2a9d8f; color: #fff; padding: 8px 16px; font-weight: bold;">Verbinden</button>
+                    </div>
+                </div>
+
+                <div id="wifiStatusMsg" style="margin-top: 12px; font-weight: bold; min-height: 24px;"></div>
+            </div>
         </div>
     </div>
 

@@ -314,9 +314,10 @@ class AlphaExecutor {
         }
 
         try {
-            // Ausführen als async function mit runner als Kontext
+            // Ausführen als echte async function mit runner als Kontext
             const runner = this;
-            const asyncFunction = new Function('runner', `return (async () => {\n${code}\n})();`);
+            const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+            const asyncFunction = new AsyncFunction('runner', code);
             await asyncFunction(runner);
         } catch (err) {
             console.error('[Executor] Fehler bei der Ausführung:', err);

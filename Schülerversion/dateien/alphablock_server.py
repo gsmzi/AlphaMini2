@@ -106,13 +106,82 @@ class RobotBridge:
     @staticmethod
     def run_adb_shell(command_args):
         """Führt einen ADB shell Befehl auf dem ersten verbundenen Gerät aus"""
+        devices = RobotBridge.get_connected_devices()
+        device_args = ["-s", devices[0]] if devices else []
         try:
-            cmd = [ADB_PATH, "shell"] + command_args
+            cmd = [ADB_PATH] + device_args + ["shell"] + command_args
             res = subprocess.run(cmd, capture_output=True, text=True, creationflags=WIN32_NO_WINDOW, timeout=6)
             return res.returncode == 0, res.stdout
         except Exception as e:
             server_log(f"[ADB Fehler] {e}")
             return False, str(e)
+
+    @staticmethod
+    def enable_wireless(target_ip=None):
+        """Aktiviert ADB über TCP/IP (Port 5555) und verbindet sich kabellos mit dem Roboter"""
+        devices = RobotBridge.get_connected_devices()
+        
+        # Falls bereits kabellos verbunden
+        for d in devices:
+            if ":5555" in d:
+                return True, f"Roboter ist bereits kabellos verbunden ({d})! USB-Kabel kann abgezogen werden.", d
+
+        # Falls IP angegeben wurde
+        if target_ip:
+            cmd = [ADB_PATH, "connect", f"{target_ip}:5555"]
+            res = subprocess.run(cmd, capture_output=True, text=True, creationflags=WIN32_NO_WINDOW, timeout=8)
+            time.sleep(1)
+            RobotBridge._last_device_check = 0.0
+            devs = RobotBridge.get_connected_devices()
+            for d in devs:
+                if target_ip in d:
+                    return True, f"Erfolgreich kabellos verbunden mit {target_ip}:5555!", f"{target_ip}:5555"
+            return False, f"Konnte nicht mit {target_ip}:5555 verbinden. Prüfe, ob PC und Roboter im selben WLAN sind.", None
+
+        # Falls per USB verbunden: IP automatisch ermitteln und tcpip 5555 aktivieren
+        if not devices:
+            return False, "Kein Roboter über USB erkannt. Bitte einmal per USB anschließen oder IP-Adresse direkt eingeben.", None
+
+        usb_device = devices[0]
+        # IP auslesen
+        ip = None
+        cmd = [ADB_PATH, "-s", usb_device, "shell", "getprop", "dhcp.wlan0.ipaddress"]
+        res = subprocess.run(cmd, capture_output=True, text=True, creationflags=WIN32_NO_WINDOW, timeout=4)
+        if res.returncode == 0 and res.stdout.strip():
+            candidate = res.stdout.strip().splitlines()[0]
+            if "." in candidate and len(candidate) <= 15:
+                ip = candidate
+        
+        if not ip:
+            cmd = [ADB_PATH, "-s", usb_device, "shell", "ip -f inet addr show wlan0"]
+            res = subprocess.run(cmd, capture_output=True, text=True, creationflags=WIN32_NO_WINDOW, timeout=4)
+            for line in res.stdout.splitlines():
+                if "inet " in line:
+                    parts = line.strip().split()
+                    if len(parts) >= 2:
+                        ip = parts[1].split("/")[0]
+                        break
+
+        if not ip:
+            return False, "Der Roboter ist noch nicht mit dem WLAN verbunden. Bitte stelle zuerst das WLAN in den Roboter-Einstellungen ein!", None
+
+        # tcpip 5555 aktivieren
+        server_log(f"[WLAN] Aktiviere Port 5555 auf {usb_device}...")
+        subprocess.run([ADB_PATH, "-s", usb_device, "tcpip", "5555"], capture_output=True, text=True, creationflags=WIN32_NO_WINDOW, timeout=6)
+        time.sleep(2)
+
+        # connect ip:5555
+        server_log(f"[WLAN] Verbinde mit {ip}:5555...")
+        subprocess.run([ADB_PATH, "connect", f"{ip}:5555"], capture_output=True, text=True, creationflags=WIN32_NO_WINDOW, timeout=6)
+        time.sleep(1)
+
+        RobotBridge._last_device_check = 0.0
+        new_devs = RobotBridge.get_connected_devices()
+        for d in new_devs:
+            if ip in d:
+                return True, f"🎉 Roboter erfolgreich kabellos verbunden ({ip}:5555)! Du kannst das USB-Kabel JETZT abziehen!", f"{ip}:5555"
+
+        return False, f"WLAN-Modus aktiviert, aber adb connect zu {ip} hat nicht sofort reagiert. Roboter und PC im selben WLAN?", ip
 
     @staticmethod
     def speak(text):
@@ -432,6 +501,11 @@ class AlphaBlockHandler(http.server.SimpleHTTPRequestHandler):
             server_log("[API] 🧪 Live-Test Winken ausgelöst")
             RobotBridge.play_action("010")
             self.send_json({"success": True, "message": "Testaktion Winken gestartet"})
+        # API: Roboter kabellos (WLAN) verbinden
+        if parsed.path == "/api/robot/connect_wifi":
+            target_ip = data.get("ip", "").strip() or None
+            success, msg, connected_ip = RobotBridge.enable_wireless(target_ip)
+            self.send_json({"success": success, "message": msg, "ip": connected_ip})
             return
 
         # API: Browser Client-Logs

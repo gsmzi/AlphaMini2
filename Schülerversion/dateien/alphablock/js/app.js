@@ -163,6 +163,22 @@ window.addEventListener('DOMContentLoaded', () => {
         updatePythonPreview();
     });
 
+    // Klick auf Start-Block oder Block-Stapel startet das Programm (wie in Scratch!)
+    workspace.addChangeListener((event) => {
+        if (event && event.type === 'click' && event.blockId) {
+            const block = workspace.getBlockById(event.blockId);
+            if (block && typeof block.getRootBlock === 'function') {
+                const root = block.getRootBlock();
+                if (root && root.type === 'alpha_when_start') {
+                    console.log('[App] Start-Block oder Blockstapel angeklickt -> Starte Programm!');
+                    if (executor && !executor.isRunning) {
+                        executor.run();
+                    }
+                }
+            }
+        }
+    });
+
     // 6. Event-Listener für UI-Buttons
     setupUIListeners();
 
@@ -335,6 +351,75 @@ function setupUIListeners() {
         });
         btnCloseCode.addEventListener('click', () => {
             codeModal.classList.remove('visible');
+        });
+    }
+
+    // 📶 WLAN Modal & Steuerung
+    const btnWifiConnect = document.getElementById('btnWifiConnect');
+    const wifiModal = document.getElementById('wifiModal');
+    const btnCloseWifi = document.getElementById('btnCloseWifi');
+    const btnAutoWifiConnect = document.getElementById('btnAutoWifiConnect');
+    const btnManualWifiConnect = document.getElementById('btnManualWifiConnect');
+    const manualIpInput = document.getElementById('manualIpInput');
+    const wifiStatusMsg = document.getElementById('wifiStatusMsg');
+
+    if (btnWifiConnect && wifiModal) {
+        btnWifiConnect.addEventListener('click', () => {
+            if (wifiStatusMsg) wifiStatusMsg.innerText = '';
+            wifiModal.classList.add('visible');
+        });
+        if (btnCloseWifi) {
+            btnCloseWifi.addEventListener('click', () => {
+                wifiModal.classList.remove('visible');
+            });
+        }
+    }
+
+    const triggerWifiConnect = async (targetIp = '') => {
+        if (!wifiStatusMsg) return;
+        wifiStatusMsg.style.color = '#3a86ff';
+        wifiStatusMsg.innerText = '⏳ Verbinde mit Roboter über WLAN... Bitte kurz warten...';
+        if (btnAutoWifiConnect) btnAutoWifiConnect.disabled = true;
+        if (btnManualWifiConnect) btnManualWifiConnect.disabled = true;
+
+        try {
+            const apiBase = (window.location && (window.location.protocol === 'http:' || window.location.protocol === 'https:'))
+                ? window.location.origin
+                : 'http://127.0.0.1:8080';
+            const res = await fetch(`${apiBase}/api/robot/connect_wifi`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip: targetIp })
+            });
+            const data = await res.json();
+            if (data.success) {
+                wifiStatusMsg.style.color = '#2a9d8f';
+                wifiStatusMsg.innerText = data.message || '🎉 Erfolgreich kabellos verbunden! USB-Kabel kann jetzt abgezogen werden!';
+                await checkRobotConnection();
+            } else {
+                wifiStatusMsg.style.color = '#e63946';
+                wifiStatusMsg.innerText = '❌ ' + (data.message || 'Verbindung fehlgeschlagen');
+            }
+        } catch (err) {
+            wifiStatusMsg.style.color = '#e63946';
+            wifiStatusMsg.innerText = '❌ Fehler: ' + err.message;
+        } finally {
+            if (btnAutoWifiConnect) btnAutoWifiConnect.disabled = false;
+            if (btnManualWifiConnect) btnManualWifiConnect.disabled = false;
+        }
+    };
+
+    if (btnAutoWifiConnect) {
+        btnAutoWifiConnect.addEventListener('click', () => triggerWifiConnect(''));
+    }
+    if (btnManualWifiConnect && manualIpInput) {
+        btnManualWifiConnect.addEventListener('click', () => {
+            const ip = manualIpInput.value.trim();
+            if (!ip) {
+                alert('Bitte gib eine gültige IP-Adresse ein!');
+                return;
+            }
+            triggerWifiConnect(ip);
         });
     }
 }
